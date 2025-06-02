@@ -16,7 +16,7 @@
     return Math.floor(Math.random() * (max - min + 1)) + min;
   }
 
-  const delaySeconds = getRandomDelay(7, 20);
+  const delaySeconds = getRandomDelay(10, 20);
   let countdown = delaySeconds;
 
   // Show countdown
@@ -49,6 +49,7 @@
       if (!response.ok) throw new Error("Fetch failed");
 
       const data = await response.json();
+      if (!data.keyword) throw new Error("Keyword limit reached");
       const keyword = data.keyword;
 
       if (keyword) {
@@ -57,10 +58,10 @@
         )}&qs=PN&form=TSFLBL`;
         window.top.location.href = url;
       } else {
-        timerBox.textContent = "âš ï¸ No keyword found";
+        timerBox.textContent = "No keyword found";
       }
     } catch (e) {
-      timerBox.textContent = "âš ï¸ Error: " + e.message;
+      timerBox.textContent = "Error: " + e.message;
     }
   }
 })();
