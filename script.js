@@ -14,7 +14,7 @@
     return Math.floor(Math.random() * (max - min + 1)) + min;
   }
 
-  const delaySeconds = getRandomDelay(7, 30);
+  const delaySeconds = getRandomDelay(7, 20);
   let countdown = delaySeconds;
 
   // Show countdown
@@ -52,7 +52,7 @@
       if (keyword) {
         const url = `https://www.bing.com/search?q=${encodeURIComponent(
           keyword
-        )}`;
+        )}&qs=PN&form=TSFLBL`;
         window.top.location.href = url;
       } else {
         timerBox.textContent = "âš ï¸ No keyword found";
