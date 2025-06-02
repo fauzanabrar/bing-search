@@ -5,6 +5,8 @@
 // @description  Fetch keyword from local server and redirect to Google every 60s with countdown display
 // @match        *://*/*
 // @grant        none
+// @updateURL    https://raw.githubusercontent.com/fauzanabrar/bing-search/main/script.user.js
+// @downloadURL  https://raw.githubusercontent.com/fauzanabrar/bing-search/main/script.user.js
 // ==/UserScript==
 
 (function () {
