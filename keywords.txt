@@ -609,3 +609,293 @@ kenapa orang membuat produk open source?
 produk open source yang menarik dicoba
 apakah ilmu forensik itu sama dengan detektif?
 bagaimana cara mengubah nama branch git menjadi main?
+How vaccine work?
+What is RNA vaccine?
+What is difference of RNA and DNA?
+Zenius
+Ruangguru
+Kenapa Zenius bisa bangkrut?
+Akun zenius gratis
+Anki flash card
+How to use javascript?
+Google Tasks
+Gmail
+Youtube
+Freecodecamp
+Cara mudah menghafal UUD 1945
+Tenses graph
+Tenses graph easier
+Cara membuat silsilah Keluarga
+platform untuk membuat silsilah keluarga dengan mudah
+apa bahasa inggrisnya silsilah keluarga?
+Bagaimana mendesign roket sehingga bisa terbang?
+Free database platform
+Cloud Database open source free
+Berapa gigi manusia?
+Kenapa gigi bisa tumbuh lagi?
+Makanan indonesia selain nasi goreng
+Apa itu flow?
+Kenapa orang bisa masuk ke dalam flow?
+Bagaimana caranya masuk ke dalam flow?
+Apakah github bisa menjalankan server gratis?
+Platform untuk menjalankan server gratis
+Bagaimana cara menghafal planet dan satelitnya?
+Bagaimana cara menghafal table periodik?
+How to measure iq without test?
+Is chess can increase IQ?
+tips untuk menggunakan vim
+hp 2 jutaan
+hp 2 jutaan terbaik
+laptop terbaik di harga 3 juta
+google docs
+google spreadsheets
+google keep notess
+apa itu regex?
+belajar regex
+regex trail diagram
+how to push github from local?
+how to easiest to use github?
+what is tips and trick using github?
+Gmaps alternatives
+Gmaps
+vanced
+revanced
+penemu yang tidak terlalu terkenal
+ilmuwan yang underrated
+belajar bahasa jepang 5 menit
+python in 10 minutes
+next js in 30 minutes
+next js or react?
+apa itu auto tune?
+bagaimana cara pakai auto tune?
+bagaimana cara bertanya di bidang pemrograman?
+opening catur untuk pemula
+french defense chess
+pirc defence chess
+openingtree
+openingtrainer
+java in 10 minutes
+Checkmate Motifs
+Anastasia's Mate
+Arabian Mate
+Balestra Mate
+Blackburne's Mate
+Damiano's Bishop Mate
+Damiano's Mate
+Discovered Mate
+Counter Check Checkmate
+Double Checkmate
+Edge Mate
+Back Rank Mate
+Edge Pin Mate
+Queen Cutoff Mate
+Side File Mate
+Smothered Mate
+Suffocation Mate
+Epaulette Mate
+Escalator Mate
+Greco's Mate
+Hook Mate
+Kill Box Mate
+Lawnmower Mate
+Lolli's Mate
+Monorail Mate
+Morphy's Mate
+Opera Mate
+Pawn Checkmates
+Pawn Mate
+Promotion Mate
+Pillsbury's Mate
+Queen and Knight Mate
+Railroad Mate
+Seizing a Square Mate
+Swallow's Tail Mate
+Threading the Needle Mate
+Boden's Mate
+Double Bishop Mate
+Dovetail Mate
+Dovetail Mate - Bishop
+Triangle Mate
+Vukovic Mate
+Walking the Plank Mate
+X-Ray Mate
+Non-mate Motifs
+Advanced Pawn
+Non-Promotion Advanced Pawn
+Promotion
+Underpromotion
+Promotion Threat
+Underpromotion Threat
+Attraction
+Avoiding Perpetual
+Avoiding Stalemate
+Blocking
+Clearance
+Diagonal Clearance
+File Clearance
+Rank Clearance
+Square Clearance
+Coercion
+Controlling Escape Square
+Counter Check
+Counting
+Multi-square Counting
+Under-protected Piece
+Defensive Move
+Achieving Perpetual
+Avoiding Mate
+Defensive Interposition
+Recapture
+Discovery
+Discovered Attack
+Discovered Check
+Discoverer Checks
+Double Check
+Discovered Defense
+Exposed King
+Gain of Tempo
+Aiming Sequence
+Appended Attack
+Desperado
+Hit and Run
+Hit and Run - Capture Defender
+Hit and Run - Discovery
+Jailbreak
+Pendulum
+Reload
+Reprotection
+Rethreaten
+Zwischenzug
+Capturing Attacker
+Hanging Piece
+Hook and Ladder
+Mate Threat
+Move Types
+Backwards Move
+En Passant
+Long Lateral Move
+Tactical Castling
+Multiple Attack
+Double Attack
+Fork
+Family Fork
+Royal Fork
+Overloading
+Pin
+Absolute Pin
+Cross-pin
+Relative Pin
+Mate Pin
+Quiet Move
+Removing the Guard
+Capturing Defender
+Distraction
+Attacking the Defender
+Luring the Defender
+Interference
+Sacrifice
+Demolition Sacrifice
+Greek Gift
+Exchange Sacrifice
+Passive Sacrifice
+Pawn Sacrifice
+Simplification
+Skewer
+Relative Skewer
+Skewer of Queen
+Skewer of Rook
+Skewer of King
+Trapped Piece
+Unpinning
+Unsound Sacrifice
+Weak Back Rank
+Win the Exchange
+Windmill
+Windmill - Discoveries
+Windmill - Knight Fork
+X-Ray
+X-Ray Attack
+X-Ray Defense
+Zugzwang
+All checkmate pattern chess
+Nama asli Ki Hadjar Dewantoro
+Jenis-jenis Anti gores hp
+Harga antigores HP
+Tips dan trik beli Anti gores HP
+Belajar Klasifikasi biologi
+Urutan Klasifikasi
+Domain
+Kingdom
+Phylum
+Filum
+Divisio
+Classis
+Ordo
+familia
+Genus
+Spesies
+positional chess
+Positional Motifs
+Avoid Trade
+Backwards Pawn
+Bad Bishop
+Bishop Pair
+Center Control
+Centralised King
+Closed File
+Connected Pawns
+Connected Rooks
+Defence
+Diagonal Battery
+Diagonal Control
+Domination
+Doubled Pawns
+Doubled Rooks
+Favourable Trade
+File Control
+Good Bishop
+Improve piece activity
+Initiative
+Isolated Pawn
+King March
+King Safety
+Knight Outpost
+Limit piece activity
+Luft
+Minority Attack
+Open File
+Opening Centre
+Opposite Colour Bishops
+Opposite Side Castling
+Outside Passed Pawn
+Overprotection
+Passed Pawn
+Pawn Blockade
+Pawn Break
+Pawn Grab
+Pawn Majority
+Pawn Phalanx
+Pawn Storm
+Penetration
+Piece Centralisation
+Piece Coordination
+Positional Sacrifice - Exchange
+Positional Sacrifice - Pawn
+Positional Sacrifice - Piece
+Positional Sacrifice - Queen
+Positional Sacrifice - Rook
+Prophylaxis
+Protected Passed Pawn
+Queen+Knight Coordination
+Rank Control
+Rook Lift
+Rook On 7th Rank
+Same colour Bishops
+Semi-Open File
+Space
+Vertical Battery
+Alekhine's Gun
+Doubled Rooks
+emailnator
+google scholar
+bing scholar
