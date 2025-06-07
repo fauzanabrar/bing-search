@@ -899,3 +899,209 @@ Doubled Rooks
 emailnator
 google scholar
 bing scholar
+geeksforgeeks
+w3school
+tws murah 2025
+numpy
+pandas
+matplotlib
+seaborn
+scikit-learn
+tensorflow
+keras
+pytorch
+opencv-python
+requests
+beautifulsoup4
+scrapy
+flask
+django
+fastapi
+sqlalchemy
+pydantic
+plotly
+bokeh
+nltk
+spacy
+transformers
+pillow
+pygame
+sympy
+pytest
+jupyter
+notebook
+click
+tqdm
+react
+vue
+angular
+jquery
+lodash
+axios
+moment
+express
+redux
+next
+nuxt
+rxjs
+three
+chart.js
+d3
+webpack
+babel
+socket.io
+mongoose
+jest
+vitest
+vite
+typescript
+tailwindcss
+bootstrap
+animejs
+gsap
+formik
+yup
+zod
+guava
+slf4j
+log4j
+jackson
+gson
+lombok
+junit
+mockito
+hibernate
+spring-core
+spring-boot
+spring-data-jpa
+spring-security
+thymeleaf
+mapstruct
+retrofit
+okhttp
+apache-commons-lang3
+apache-httpclient
+joda-time
+jsoup
+javapoet
+rxjava
+dagger
+micronaut
+vertx
+jooq
+h2
+flyway-core
+logback-classic
+How do I create a new repository on GitHub?
+How can I clone a GitHub repository?
+What is the difference between git pull and git fetch?
+How do I create a new branch in Git?
+How do I switch to another branch?
+How do I merge one branch into another?
+How can I resolve merge conflicts?
+How do I fork a repository?
+How do I create a pull request?
+What is the difference between a fork and a clone?
+How do I contribute to an open-source project?
+How can I revert a commit?
+How do I delete a branch locally and remotely?
+How do I check the commit history of a repository?
+What is a GitHub issue and how do I create one?
+How do I add collaborators to a repository?
+How can I make a repository private or public?
+How do I generate an SSH key and add it to GitHub?
+What is a GitHub Action?
+How do I use GitHub Pages to host a site?
+How do I use .gitignore to exclude files from Git?
+How do I rebase a branch?
+What is the difference between git reset and git revert?
+How can I squash commits before pushing?
+How do I tag a release in Git?
+How do I undo the last commit?
+How do I view a file’s history in a GitHub repo?
+How do I use GitHub Desktop?
+How do I sync my fork with the original repository?
+How can I protect branches on GitHub?
+How do I exit Vim?
+How do I save and quit in Vim?
+How can I move the cursor quickly in Vim?
+How do I copy and paste text in Vim?
+What is the difference between normal, insert, and visual mode in Vim?
+How do I undo and redo changes in Vim?
+How do I delete a word, line, or character in Vim?
+How do I search for text in Vim?
+How do I replace text in Vim?
+How can I record and use macros in Vim?
+How do I split the screen in Vim?
+How do I switch between windows in Vim?
+How can I open multiple files in Vim?
+How do I customize my .vimrc file?
+How do I install Vim plugins?
+What are some must-have Vim plugins?
+How do I enable syntax highlighting in Vim?
+How do I use autocomplete in Vim?
+How do I jump to a specific line in Vim?
+How do I navigate between paragraphs or sections in Vim?
+How can I visually select blocks of text?
+How do I delete everything inside a pair of brackets in Vim?
+How do I use Vim registers?
+How do I work with buffers in Vim?
+How can I change indentation in Vim?
+How do I re-indent code automatically?
+How do I run shell commands from within Vim?
+How do I view line numbers in Vim?
+How do I yank (copy) to the system clipboard?
+How do I search and replace across multiple files in Vim?
+React
+Vue.js
+Angular
+Next.js
+Nuxt.js
+Svelte
+Gatsby
+Bootstrap
+Tailwind CSS
+Material UI
+Chakra UI
+Foundation
+jQuery
+Lit
+Alpine.js
+Vite
+Parcel
+Webpack
+ESBuild
+Electron
+cara baca tulisan doctor
+how to read doctor handwriting
+is doctor recipe is have pattern?
+Socrates  
+Plato  
+Aristotle  
+Confucius  
+Laozi  
+Immanuel Kant  
+Friedrich Nietzsche  
+Rene Descartes  
+John Locke  
+Thomas Hobbes  
+David Hume  
+Karl Marx  
+Jean-Jacques Rousseau  
+Baruch Spinoza  
+Georg Wilhelm Friedrich Hegel  
+Soren Kierkegaard  
+Michel Foucault  
+Jacques Derrida  
+Simone de Beauvoir  
+Jean-Paul Sartre  
+Martin Heidegger  
+Ludwig Wittgenstein  
+Bertrand Russell  
+Albert Camus  
+Francis Bacon  
+Gottfried Wilhelm Leibniz  
+Epicurus  
+Zeno of Citium  
+Diogenes  
+Pythagoras  
