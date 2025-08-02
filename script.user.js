@@ -16,7 +16,7 @@
     return Math.floor(Math.random() * (max - min + 1)) + min;
   }
 
-  const delaySeconds = getRandomDelay(25, 45);
+  const delaySeconds = getRandomDelay(23, 45);
   let countdown = delaySeconds;
 
   // Show countdown
@@ -45,7 +45,8 @@
 
   async function fetchAndRedirect() {
     try {
-      const response = await fetch("http://localhost:3000/keyword");
+      // const response = await fetch("http://localhost:3000/keyword");
+      const response = await fetch("https://bing-search.onrender.com/keyword");
       if (!response.ok) throw new Error("Fetch failed");
 
       const data = await response.json();
