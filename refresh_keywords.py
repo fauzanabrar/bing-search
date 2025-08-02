@@ -9,7 +9,7 @@ with open('keywords_called.txt', 'r', encoding='utf-8') as f:
         m = re.match(r'^(.*?):(\d+)$', line)
         if m:
             keyword, count = m.group(1), int(m.group(2))
-            if count >= 10:
+            if count >= 6:
                 to_remove.add(keyword)
             else:
                 called_lines.append(line)
