@@ -16,7 +16,7 @@
     return Math.floor(Math.random() * (max - min + 1)) + min;
   }
 
-  const delaySeconds = getRandomDelay(23, 45);
+  const delaySeconds = getRandomDelay(23, 35);
   let countdown = delaySeconds;
 
   // Show countdown
