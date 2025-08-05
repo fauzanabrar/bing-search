@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <title>Search Results</title>
+  <style>
+    body,
+    html {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      overflow: hidden;
+    }
+
+    #searchFrame {
+      width: 100%;
+      height: 100vh;
+      border: none;
+    }
+
+    .nav-bar {
+      padding: 10px;
+      background: #f8f9fa;
+      border-bottom: 1px solid #ddd;
+    }
+
+    .nav-bar a {
+      text-decoration: none;
+      color: #007bff;
+      margin-right: 15px;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="nav-bar">
+    <a href="/">← Back to Keywords</a>
+    <span>Current Search: <strong>{{ keyword }}</strong></span>
+  </div>
+  <iframe id="searchFrame" src="https://www.bing.com/search?igu=1&q={{ keyword | urlencode }}"></iframe>
+</body>
+
+</html>

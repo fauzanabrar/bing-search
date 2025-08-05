@@ -215,7 +215,7 @@ animoto video tidak bisa di download:5
 kenapa printer suka error pas print skripsi:4
 cara wire crypto:5
 cara cek saldo saham lewat aplikasi bank digital:5
-tips jualan di tiktok shop pemula:4
+tips jualan di tiktok shop pemula:5
 kenapa hasil panen cabai suka busuk:2
 cara pasang wifi sendiri di rumah tanpa teknisi:1
 apakah meme coin safe:4
@@ -518,7 +518,7 @@ motor bekas murah sumatera utara:4
 apakah compile help:4
 cara automate test:4
 cara main catur biar ga gampang remi:2
-screencastify rekam layar tidak bisa di save di hp:3
+screencastify rekam layar tidak bisa di save di hp:4
 tips pilih ekspedisi murah:5
 kenapa attack succeed:3
 cara cache data:1
@@ -886,7 +886,7 @@ how to set up dual monitors:3
 cara handle error:4
 cara mengatasi motor mogok:3
 best productivity apps for students:4
-motor bekas murah sulawesi tengah:3
+motor bekas murah sulawesi tengah:4
 how to memorize vocabulary:4
 kenapa canva pro mahal banget:5
 loom kenapa tidak bisa rekam suara di laptop:5
@@ -971,7 +971,7 @@ kenapa hasil panen cabai suka gagal panen nasional:5
 cara tanam hidroponik di teras rumah:5
 cara jadi trending di twitter tanpa posting:4
 tips main boardgame biar gak lupa giliran:3
-cara main boardgame biar ga rebutan menang:5
+cara main boardgame biar ga rebutan menang:6
 apakah negara lain juga suka makan bakso:5
 kenapa hack happen:5
 kenapa boardgame modern banyak expansion baru:4
@@ -1986,7 +1986,7 @@ cara pasang wifi di rumah tanpa teknisi:3
 netflix premium:4
 how to share resources legally:1
 cara main boardgame online gratis:3
-cara deploy gratis:2
+cara deploy gratis:3
 cara restore fast:4
 how to mentor junior developers:3
 loom kenapa tidak bisa share screen di laptop:4

@@ -39,6 +39,15 @@ def refresh():
     except subprocess.CalledProcessError:
         return jsonify({"status": "error", "message": "Error running refresh script"}), 500
 
+@app.route("/reload_keywords", methods=["POST"])
+def reload_keywords():
+    with lock:
+        try:
+            load_keywords()
+            return jsonify({"status": "success", "message": "Keywords reloaded successfully"})
+        except Exception as e:
+            return jsonify({"status": "error", "message": str(e)}), 500
+
 @app.route("/keyword", methods=["GET"])
 def get_random_keyword():
     with lock:
@@ -69,6 +78,12 @@ def get_random_keyword():
         else:
             return jsonify({"keyword": None, "message": "No keywords left"}), 404
 
+
+########## Search Functionality ##########
+@app.route("/search")
+def search():
+    keyword = request.args.get('q', '')
+    return render_template("search.html", keyword=keyword)
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=3000)
