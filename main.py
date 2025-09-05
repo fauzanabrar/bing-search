@@ -3,6 +3,7 @@ from flask_cors import CORS
 import threading
 import random
 import subprocess
+import requests
 
 app = Flask(__name__)
 CORS(app)
@@ -24,6 +25,14 @@ def home():
 def add_keywords():
     new_keywords = request.form.get("keywords", "").strip()
     if new_keywords:
+        # Check if keyword already exists
+        with open("keywords.txt", "r") as f:
+            existing_keywords = [line.strip() for line in f if line.strip()]
+        
+        if new_keywords in existing_keywords:
+            return jsonify({"status": "error", "message": "Keyword already exists"}), 400
+        
+        # Add new keyword if it doesn't exist
         with open("keywords.txt", "a") as f:
             f.write("\n" + new_keywords)
         load_keywords()
@@ -84,6 +93,19 @@ def get_random_keyword():
 def search():
     keyword = request.args.get('q', '')
     return render_template("search.html", keyword=keyword)
+
+@app.route("/proxy_search")
+def proxy_search():
+    keyword = request.args.get('q', '')
+    headers = {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+    }
+    
+    response = requests.get(f'https://bing.com/',
+                          headers=headers)
+    
+    return response.text
+
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=3000)
