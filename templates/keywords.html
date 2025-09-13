@@ -49,6 +49,7 @@
     <button onclick="displayKeywords()">Refresh List</button>
   </div>
   <div id="message"></div>
+  <div id="stats">Total Keywords: <span id="keywordCount">0</span></div>
   <textarea id="keywordList" readonly></textarea>
 
   <script>
@@ -67,7 +68,9 @@
 
         if (data.keywords) {
           const keywordList = document.getElementById('keywordList');
+          const keywordCount = document.getElementById('keywordCount');
           keywordList.value = data.keywords.join('\n');
+          keywordCount.textContent = data.total_count;
         } else {
           showMessage('No keywords available', true);
         }

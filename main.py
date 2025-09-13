@@ -175,9 +175,17 @@ def proxy_search():
 def get_keywords():
     try:
         keywords = [k.keyword for k in Keyword.query.all()]
-        return jsonify({'keywords': keywords})
+        total_count = len(keywords)
+        return jsonify({
+            'keywords': keywords,
+            'total_count': total_count
+        })
     except Exception as e:
-        return jsonify({'keywords': [], 'error': str(e)}), 500
+        return jsonify({
+            'keywords': [], 
+            'total_count': 0, 
+            'error': str(e)
+        }), 500
 
 @app.route('/get_keywords_with_counts')
 def get_keywords_with_counts():
