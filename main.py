@@ -1,21 +1,48 @@
 from flask import Flask, jsonify, render_template, request
 from flask_cors import CORS
+from flask_sqlalchemy import SQLAlchemy
+from dotenv import load_dotenv
 import threading
 import random
 import subprocess
 import requests
+import os
+
+# Load environment variables from .env file
+load_dotenv()
 
 app = Flask(__name__)
 CORS(app)
 lock = threading.Lock()
 
-# Load keywords into memory from file
+# Database Configuration
+database_url = os.getenv('DATABASE_URL')
+if not database_url:
+    raise ValueError("No DATABASE_URL environment variable found")
+
+app.config['SQLALCHEMY_DATABASE_URI'] = database_url
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+db = SQLAlchemy(app)
+
+# Database Models
+class Keyword(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    keyword = db.Column(db.String(200), unique=True, nullable=False)
+    called_count = db.Column(db.Integer, default=0)
+
+# Initialize keywords list
+keywords = []
+
+# Modified load_keywords function to use database
 def load_keywords():
     global keywords
-    with open("keywords.txt", "r") as f:
-        keywords = [line.strip() for line in f if line.strip()]
+    with app.app_context():
+        keywords = [k.keyword for k in Keyword.query.all()]
 
-load_keywords()
+# Create tables and load initial keywords
+with app.app_context():
+    db.create_all()
+    load_keywords()
 
 @app.route("/")
 def home():
@@ -26,17 +53,20 @@ def add_keywords():
     new_keywords = request.form.get("keywords", "").strip()
     if new_keywords:
         # Check if keyword already exists
-        with open("keywords.txt", "r") as f:
-            existing_keywords = [line.strip() for line in f if line.strip()]
-        
-        if new_keywords in existing_keywords:
+        if Keyword.query.filter_by(keyword=new_keywords).first():
             return jsonify({"status": "error", "message": "Keyword already exists"}), 400
         
-        # Add new keyword if it doesn't exist
-        with open("keywords.txt", "a") as f:
-            f.write("\n" + new_keywords)
-        load_keywords()
-        return jsonify({"status": "success", "message": "Keywords added successfully"})
+        # Add new keyword to database
+        keyword = Keyword(keyword=new_keywords)
+        db.session.add(keyword)
+        try:
+            db.session.commit()
+            load_keywords()
+            return jsonify({"status": "success", "message": "Keywords added successfully"})
+        except Exception as e:
+            db.session.rollback()
+            return jsonify({"status": "error", "message": str(e)}), 500
+            
     return jsonify({"status": "error", "message": "No keywords provided"}), 400
 
 @app.route("/refresh", methods=["POST"])
@@ -62,28 +92,15 @@ def get_random_keyword():
     with lock:
         if keywords:
             index = random.randint(0, len(keywords) - 1)
-            keyword = keywords.pop(index)
+            keyword_text = keywords.pop(index)
+            
+            # Update count in database
+            keyword = Keyword.query.filter_by(keyword=keyword_text).first()
+            if keyword:
+                keyword.called_count += 1
+                db.session.commit()
 
-            # Read current counts
-            counts = {}
-            try:
-                with open("keywords_called.txt", "r") as f:
-                    for line in f:
-                        if ":" in line:
-                            k, v = line.strip().split(":", 1)
-                            counts[k] = int(v)
-            except FileNotFoundError:
-                pass
-
-            # Update count
-            counts[keyword] = counts.get(keyword, 0) + 1
-
-            # Write back counts
-            with open("keywords_called.txt", "w") as f:
-                for k, v in counts.items():
-                    f.write(f"{k}:{v}\n")
-
-            return jsonify({"keyword": keyword})
+            return jsonify({"keyword": keyword_text})
         else:
             return jsonify({"keyword": None, "message": "No keywords left"}), 404
 
