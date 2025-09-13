@@ -56,13 +56,16 @@
     <button onclick="addKeywords()">Submit Keywords</button>
     <button onclick="refreshKeywords()">Refresh Keywords</button>
     <button onclick="reloadKeywords()">Reload Keywords</button>
+    <button onclick="window.location.href='/keywords'">View All Keywords</button>
   </div>
   <div id="message"></div>
 
-  <div class="search-buttons">
+  <!-- Remove the keyword-list div and its contents -->
+
+  <!-- <div class="search-buttons">
     <h2>Search</h2>
     <button onclick="openRandomSearch()">Random Search</button>
-  </div>
+  </div> -->
 
   <script>
     function showMessage(message, isError = false) {
@@ -81,7 +84,8 @@
           headers: {
             'Content-Type': 'application/x-www-form-urlencoded',
           },
-          body: `keywords=${encodeURIComponent(keywords)}`
+          body: `keywords=${encodeURIComponent(keywords)}`,
+          timeout: 60000 // Increase timeout to 60 seconds
         });
         const data = await response.json();
         showMessage(data.message, !response.ok);
@@ -89,7 +93,7 @@
           document.getElementById('keywords').value = '';
         }
       } catch (error) {
-        showMessage('Error adding keywords', true);
+        showMessage('Error adding keywords: ' + error.message, true);
       }
     }
 
@@ -132,6 +136,9 @@
         showMessage('Error opening random search', true);
       }
     }
+
+    // Initial load of keywords when page loads
+    document.addEventListener('DOMContentLoaded', displayKeywords);
   </script>
 </body>
 

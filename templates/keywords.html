@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <title>Keywords List</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+
+    textarea {
+      width: 100%;
+      height: 400px;
+      margin: 10px 0;
+      background-color: #f8f9fa;
+    }
+
+    button {
+      padding: 10px 20px;
+      margin: 5px;
+      cursor: pointer;
+    }
+
+    #message {
+      margin: 10px 0;
+      padding: 10px;
+      display: none;
+    }
+
+    .success {
+      background-color: #dff0d8;
+      color: #3c763d;
+    }
+
+    .error {
+      background-color: #f2dede;
+      color: #a94442;
+    }
+  </style>
+</head>
+
+<body>
+  <h1>Keywords List</h1>
+  <div>
+    <button onclick="window.location.href='/'">Back to Manager</button>
+    <button onclick="displayKeywords()">Refresh List</button>
+  </div>
+  <div id="message"></div>
+  <textarea id="keywordList" readonly></textarea>
+
+  <script>
+    function showMessage(message, isError = false) {
+      const msgDiv = document.getElementById('message');
+      msgDiv.textContent = message;
+      msgDiv.className = isError ? 'error' : 'success';
+      msgDiv.style.display = 'block';
+      setTimeout(() => msgDiv.style.display = 'none', 5000);
+    }
+
+    async function displayKeywords() {
+      try {
+        const response = await fetch('/get_keywords');
+        const data = await response.json();
+
+        if (data.keywords) {
+          const keywordList = document.getElementById('keywordList');
+          keywordList.value = data.keywords.join('\n');
+        } else {
+          showMessage('No keywords available', true);
+        }
+      } catch (error) {
+        showMessage('Error fetching keywords', true);
+      }
+    }
+
+    // Initial load of keywords when page loads
+    document.addEventListener('DOMContentLoaded', displayKeywords);
+  </script>
+</body>
+
+</html>
