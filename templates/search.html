@@ -37,7 +37,7 @@
     <a href="/">← Back to Keywords</a>
     <span>Current Search: <strong>{{ keyword }}</strong></span>
   </div>
-  <iframe id="searchFrame" src="https://www.bing.com/search?igu=1&q={{ keyword | urlencode }}"></iframe>
+  <iframe id="searchFrame" src="/proxy_search?q={{ keyword | urlencode }}"></iframe>
 </body>
 
 </html>

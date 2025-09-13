@@ -108,7 +108,7 @@ how to avoid teacher burnout:5
 cara enforce rule:2
 how to make phone waterproof with lakban:3
 tips lulus ujian SIM:3
-apakah signal bagus:3
+apakah signal bagus:4
 how to make instant noodle pedes tanpa cabe:3
 screencastify rekam layar hitam:5
 kenapa macbook mahal:4
@@ -474,7 +474,7 @@ cara jadi terkenal tanpa usaha dan followers:4
 cara health maintain:5
 tips merawat aki motor:4
 kenapa emergency come:4
-how to make instant noodle with air kelapa muda:5
+how to make instant noodle with air kelapa muda:6
 powtoon animasi buat anak tk:3
 tips relationship manage:4
 obs studio suara pecah di hp:5
@@ -847,7 +847,7 @@ how to make instant noodle with fanta:3
 how to organize digital files:4
 kenapa printer tiba-tiba hidup sendiri jam 3 pagi:5
 cara mengatur keuangan mahasiswa biar ga minus:2
-obs studio buat rekam game ringan:3
+obs studio buat rekam game ringan:4
 how to use Zoom for online classes:5
 cara jadi terkenal tanpa usaha dan modal:4
 harga motor zaman sekarang:1
@@ -1279,7 +1279,7 @@ how to backup data to cloud:3
 apakah bisa jualan tanpa modal:5
 takopi sub indo:4
 how to make phone charge pake tenaga matahari:3
-how to make instant noodle taste like ramen:4
+how to make instant noodle taste like ramen:5
 kenapa conflict arise:3
 apakah teknologi AI bisa gantiin operator:2
 how to make robot dari sendok plastik bening:4
@@ -1739,7 +1739,7 @@ apakah inflasi per tahun benar-benar akurat?:3
 apakah negara lain juga suka makan mie instan:5
 apakah deadline real:4
 how to use online libraries:2
-cara mengatur memori hp biar ga penuh terus:2
+cara mengatur memori hp biar ga penuh terus:3
 obs studio suara pecah di laptop:2
 kenapa boardgame modern banyak miniatur:1
 apakah teknologi VR bisa bikin pusing:4
@@ -2229,7 +2229,7 @@ kenapa wifi di rumah suka lemot pas hujan deras:2
 what is use strict means on js?:4
 tips main boardgame biar gak salah aturan:5
 cara edit foto pake snapseed:3
-cara dapet wifi gratis di kampung:4
+cara dapet wifi gratis di kampung:5
 cara prepare change:1
 cara judgment improve:2
 The False Consensus Effect:3
@@ -2260,7 +2260,7 @@ tips target revise:3
 kenapa culture important:3
 motor bekas murah jambi:3
 kenapa hp android suka panas pas charging:5
-apakah wordpress bagus:1
+apakah wordpress bagus:2
 tips value align:4
 cara dapet diskon shopee tiap tanggal tua:1
 cara upgrade hp jadul biar bisa main game:4
@@ -2301,7 +2301,7 @@ how to make instant coffee with air es batu banyak:2
 kenapa hp android suka panas pas di cas:2
 what is the state of the art in artificial intelligence research?:2
 motor bekas murah sumatera timur:2
-motor bekas murah sulawesi selatan:1
+motor bekas murah sulawesi selatan:2
 apakah okr work:2
 apakah pattern help:2
 how to showcase projects online:1
@@ -2384,3 +2384,4 @@ cara belajar coding untuk karir software architect:1
 cara belajar coding untuk karir network engineer:1
 cara belajar coding untuk karir blockchain developer:1
 tips belajar coding untuk karir AI engineer:1
+obs studio suara tidak sinkron di hp:1
