@@ -63,10 +63,13 @@
     let randomKeyword = related[Math.floor(Math.random() * related.length)];
     box.innerHTML = `📤 Sending: <b>${randomKeyword}</b> ...`;
 
+    let formData = new URLSearchParams();
+    formData.append("keywords", randomKeyword);
+
     fetch("https://bing-search.onrender.com/add_keywords", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ keywords: randomKeyword }),
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: formData.toString(),
     })
       .then((res) => res.json().catch(() => ({})))
       .then((data) => {
