@@ -2,18 +2,21 @@ from flask import Flask, jsonify, render_template, request
 from flask_cors import CORS
 from flask_sqlalchemy import SQLAlchemy
 from dotenv import load_dotenv
+from contextlib import contextmanager
+from threading import Lock, RLock
 import threading
 import random
 import subprocess
 import requests
 import os
+import time
 
 # Load environment variables from .env file
 load_dotenv()
 
 app = Flask(__name__)
 CORS(app)
-lock = threading.Lock()
+lock = RLock()
 
 # Database Configuration
 database_url = os.getenv('DATABASE_URL')
@@ -24,6 +27,8 @@ app.config['SQLALCHEMY_DATABASE_URI'] = database_url
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SQLALCHEMY_POOL_SIZE'] = 20
 app.config['SQLALCHEMY_MAX_OVERFLOW'] = 40
+app.config['SQLALCHEMY_POOL_TIMEOUT'] = 30  # seconds
+app.config['SQLALCHEMY_POOL_RECYCLE'] = 1800  # 30 minutes
 db = SQLAlchemy(app)
 
 # Database Models
@@ -121,36 +126,57 @@ def reload_keywords():
         except Exception as e:
             return jsonify({"status": "error", "message": str(e)}), 500
 
+@contextmanager
+def timeout_lock(lock, timeout=5):
+    start_time = time.time()
+    while True:
+        if lock.acquire(blocking=False):
+            try:
+                yield
+            finally:
+                lock.release()
+            return
+        if time.time() - start_time > timeout:
+            raise TimeoutError("Failed to acquire lock within timeout")
+        time.sleep(0.1)
+
 @app.route("/keyword", methods=["GET"])
 def get_random_keyword():
-    with lock:
-        if keywords:
+    try:
+        with timeout_lock(lock, timeout=5):  # 5 second timeout
+            if not keywords:
+                return jsonify({"keyword": None, "message": "No keywords left"}), 404
+                
             index = random.randint(0, len(keywords) - 1)
             keyword_text = keywords.pop(index)
             
-            # Update count in database and check threshold
-            keyword = Keyword.query.filter_by(keyword=keyword_text).first()
-            if keyword:
-                keyword.called_count += 1
+            try:
+                # Add timeout to database operations
+                with db.engine.connect().execution_options(timeout=5) as conn:
+                    keyword = Keyword.query.filter_by(keyword=keyword_text).first()
+                    if keyword:
+                        keyword.called_count += 1
+                        
+                        if keyword.called_count >= 10:
+                            db.session.delete(keyword)
+                            if keyword_text in keywords:
+                                keywords.remove(keyword_text)
+                        
+                        db.session.commit()
+                        
+                        return jsonify({
+                            "keyword": keyword_text,
+                            "count": keyword.called_count,
+                            "deleted": keyword.called_count >= 10
+                        })
+            except Exception as db_error:
+                db.session.rollback()
+                raise db_error
                 
-                # Check if count exceeds threshold
-                if keyword.called_count >= 10:
-                    # Remove from database
-                    db.session.delete(keyword)
-                    # Remove from global keywords list if present
-                    if keyword_text in keywords:
-                        keywords.remove(keyword_text)
-                
-                db.session.commit()
-                
-                # Return the keyword even if it's being deleted
-                return jsonify({
-                    "keyword": keyword_text,
-                    "count": keyword.called_count,
-                    "deleted": keyword.called_count >= 10
-                })
-
-        return jsonify({"keyword": None, "message": "No keywords left"}), 404
+    except TimeoutError:
+        return jsonify({"error": "Request timed out"}), 504
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 
 ########## Search Functionality ##########
