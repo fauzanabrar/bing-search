@@ -9,6 +9,9 @@ import subprocess
 import requests
 import os
 import time
+import json
+from pathlib import Path
+import logging
 
 # Load environment variables from .env file
 load_dotenv()
@@ -110,20 +113,45 @@ def add_keywords():
 @app.route("/refresh", methods=["POST"])
 def refresh():
     try:
-        subprocess.run(["python", "refresh_keywords.py"], check=True)
-        load_keywords()
-        return jsonify({"status": "success", "message": "Refresh completed successfully"})
+        with lock:  # Add lock to prevent race conditions
+            # First sync the counts
+            sync_called_counts_with_db()
+            # Then run refresh script
+            subprocess.run(["python", "refresh_keywords.py"], check=True)
+            # Finally reload keywords
+            load_keywords()
+            return jsonify({
+                "status": "success", 
+                "message": "Refresh completed successfully"
+            })
     except subprocess.CalledProcessError:
-        return jsonify({"status": "error", "message": "Error running refresh script"}), 500
+        return jsonify({
+            "status": "error", 
+            "message": "Error running refresh script"
+        }), 500
+    except Exception as e:
+        return jsonify({
+            "status": "error",
+            "message": f"Error during refresh: {str(e)}"
+        }), 500
 
 @app.route("/reload_keywords", methods=["POST"])
 def reload_keywords():
-    with lock:
-        try:
+    try:
+        with lock:
+            # First sync the counts
+            sync_called_counts_with_db()
+            # Then reload keywords
             load_keywords()
-            return jsonify({"status": "success", "message": "Keywords reloaded successfully"})
-        except Exception as e:
-            return jsonify({"status": "error", "message": str(e)}), 500
+            return jsonify({
+                "status": "success",
+                "message": "Keywords reloaded successfully"
+            })
+    except Exception as e:
+        return jsonify({
+            "status": "error", 
+            "message": str(e)
+        }), 500
 
 @contextmanager
 def timeout_lock(lock, timeout=5):
@@ -142,42 +170,35 @@ def timeout_lock(lock, timeout=5):
 @app.route("/keyword", methods=["GET"])
 def get_random_keyword():
     try:
-        with timeout_lock(lock, timeout=5):  # 5 second timeout
+        with timeout_lock(lock, timeout=5):
             if not keywords:
                 return jsonify({"keyword": None, "message": "No keywords left"}), 404
                 
             index = random.randint(0, len(keywords) - 1)
             keyword_text = keywords.pop(index)
             
+            # Use file-based counting instead of database
+            count = increment_keyword_count(keyword_text)
+            
+            # Immediately sync if count reaches deletion threshold
+            # if count >= 1:
+            #     sync_called_counts_with_db()
+                
             return jsonify({
-                            "keyword": keyword_text,
-                        })
-            # try:
-            #     # Add timeout to database operations
-            #     with db.engine.connect().execution_options(timeout=5) as conn:
-            #         keyword = Keyword.query.filter_by(keyword=keyword_text).first()
-            #         if keyword:
-            #             keyword.called_count += 1
-                        
-            #             if keyword.called_count >= 10:
-            #                 db.session.delete(keyword)
-            #                 if keyword_text in keywords:
-            #                     keywords.remove(keyword_text)
-                        
-            #             db.session.commit()
-                        
-            #             return jsonify({
-            #                 "keyword": keyword_text,
-            #                 "count": keyword.called_count,
-            #                 "deleted": keyword.called_count >= 10
-            #             })
-            # except Exception as db_error:
-            #     db.session.rollback()
-            #     raise db_error
+                "keyword": keyword_text,
+                "count": count,
+                "deleted": count >= 1
+            })
                 
     except TimeoutError:
+        # Put keyword back if we had timeout
+        if 'keyword_text' in locals():
+            keywords.append(keyword_text)
         return jsonify({"error": "Request timed out"}), 504
     except Exception as e:
+        # Put keyword back if we had an error
+        if 'keyword_text' in locals():
+            keywords.append(keyword_text)
         return jsonify({"error": str(e)}), 500
 
 
@@ -232,6 +253,73 @@ def get_keywords_with_counts():
 @app.route("/keywords")
 def keywords_page():
     return render_template("keywords.html")
+
+CALLED_COUNTS_FILE = "keywords_called.txt"
+
+def load_called_counts():
+    try:
+        if Path(CALLED_COUNTS_FILE).exists():
+            with open(CALLED_COUNTS_FILE, 'r') as f:
+                return json.load(f)
+    except Exception:
+        return {}
+    return {}
+
+def save_called_counts(counts):
+    with open(CALLED_COUNTS_FILE, 'w') as f:
+        json.dump(counts, f)
+
+def increment_keyword_count(keyword):
+    counts = load_called_counts()
+    counts[keyword] = counts.get(keyword, 0) + 1
+    save_called_counts(counts)
+    return counts[keyword]
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+def sync_called_counts_with_db():
+    counts = load_called_counts()
+    to_delete = []
+    deleted_count = 0
+    
+    logger.info(f"Starting sync with counts from file: {counts}")
+    
+    try:
+        for keyword_text, count in counts.items():
+            keyword = Keyword.query.filter_by(keyword=keyword_text).first()
+            if keyword:
+                if count >= 1:
+                    logger.info(f"Marking for deletion: {keyword_text} with count {count}")
+                    db.session.delete(keyword)
+                    to_delete.append(keyword_text)
+                    deleted_count += 1
+                else:
+                    keyword.called_count = count
+        
+        db.session.commit()
+        logger.info(f"Deleted {deleted_count} keywords from database")
+        
+        # Clean up the keywords list
+        removed_from_list = 0
+        for keyword in to_delete:
+            if keyword in keywords:
+                logger.info(f"Removing {keyword} from keywords list")
+                keywords.remove(keyword)
+                removed_from_list += 1
+        logger.info(f"Removed {removed_from_list} keywords from memory list")
+            
+        # Clean up the counts file
+        old_count = len(counts)
+        new_counts = {k: v for k, v in counts.items() if v < 1}
+        save_called_counts(new_counts)
+        logger.info(f"Cleaned counts file: removed {old_count - len(new_counts)} entries")
+        logger.info(f"Final counts in file: {new_counts}")
+        
+    except Exception as e:
+        logger.error(f"Error in sync: {str(e)}")
+        db.session.rollback()
+        raise e
 
 
 if __name__ == "__main__":
