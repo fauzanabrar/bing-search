@@ -3,8 +3,7 @@ from flask_cors import CORS
 from flask_sqlalchemy import SQLAlchemy
 from dotenv import load_dotenv
 from contextlib import contextmanager
-from threading import Lock, RLock
-import threading
+from threading import RLock
 import random
 import subprocess
 import requests
@@ -150,28 +149,28 @@ def get_random_keyword():
             index = random.randint(0, len(keywords) - 1)
             keyword_text = keywords.pop(index)
             
-            try:
-                # Add timeout to database operations
-                with db.engine.connect().execution_options(timeout=5) as conn:
-                    keyword = Keyword.query.filter_by(keyword=keyword_text).first()
-                    if keyword:
-                        keyword.called_count += 1
+            # try:
+            #     # Add timeout to database operations
+            #     with db.engine.connect().execution_options(timeout=5) as conn:
+            #         keyword = Keyword.query.filter_by(keyword=keyword_text).first()
+            #         if keyword:
+            #             keyword.called_count += 1
                         
-                        if keyword.called_count >= 10:
-                            db.session.delete(keyword)
-                            if keyword_text in keywords:
-                                keywords.remove(keyword_text)
+            #             if keyword.called_count >= 10:
+            #                 db.session.delete(keyword)
+            #                 if keyword_text in keywords:
+            #                     keywords.remove(keyword_text)
                         
-                        db.session.commit()
+            #             db.session.commit()
                         
-                        return jsonify({
-                            "keyword": keyword_text,
-                            "count": keyword.called_count,
-                            "deleted": keyword.called_count >= 10
-                        })
-            except Exception as db_error:
-                db.session.rollback()
-                raise db_error
+            #             return jsonify({
+            #                 "keyword": keyword_text,
+            #                 "count": keyword.called_count,
+            #                 "deleted": keyword.called_count >= 10
+            #             })
+            # except Exception as db_error:
+            #     db.session.rollback()
+            #     raise db_error
                 
     except TimeoutError:
         return jsonify({"error": "Request timed out"}), 504
