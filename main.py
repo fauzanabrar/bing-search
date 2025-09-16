@@ -149,6 +149,9 @@ def get_random_keyword():
             index = random.randint(0, len(keywords) - 1)
             keyword_text = keywords.pop(index)
             
+            return jsonify({
+                            "keyword": keyword_text,
+                        })
             # try:
             #     # Add timeout to database operations
             #     with db.engine.connect().execution_options(timeout=5) as conn:
