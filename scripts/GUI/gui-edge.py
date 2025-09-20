@@ -48,6 +48,7 @@ ua_desktop = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Ge
 ua_mobile = "Mozilla/5.0 (iPhone; CPU iPhone OS 15_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/15.0 Mobile/15E148 Safari/604.1"
 
 stop_flag = False
+skip_current_flag = False
 skip_vars = {}
 
 # ==== CLOSE EDGE CROSS-PLATFORM ====
@@ -68,29 +69,33 @@ def close_edge():
 
 # ==== Jalankan query ====
 def run_queries(user_agent, skipProfiles, waitSeconds, progress_var):
-    global stop_flag
-    total = len(queries)
-    for i, query in enumerate(queries, 1):
+    global stop_flag, skip_current_flag
+    total_profiles = endProfile - startProfile + 1
+    query_count = len(queries)
+
+    for idx, profileNum in enumerate(range(startProfile, endProfile + 1), 1):
         if stop_flag:
             break
-
-        profileNum = startProfile + (i - 1)
         if profileNum in skipProfiles:
             continue
-        if profileNum > endProfile:
-            break
 
+        query = queries[(profileNum - startProfile) % query_count]
         url = searchEngine + query.replace(" ", "+")
-        cmd = [edgePath, f'--profile-directory=Profile {profileNum}', f'--user-agent={user_agent}', url]
+
+        cmd = [edgePath, f'--profile-directory=Profile {profileNum}',
+               f'--user-agent={user_agent}', url]
         subprocess.Popen(cmd)
 
         for sec in range(waitSeconds):
             if stop_flag:
                 break
+            if skip_current_flag:   # kalau tombol Skip ditekan
+                skip_current_flag = False
+                break
             time.sleep(1)
 
         close_edge()
-        progress_var.set(int((i / total) * 100))
+        progress_var.set(int((idx / total_profiles) * 100))
 
     messagebox.showinfo("Selesai", "Script selesai atau dihentikan!")
 
@@ -103,6 +108,7 @@ def start_script():
         return
 
     skipProfiles = [i for i, var in skip_vars.items() if var.get() == 1]
+
     ua = ua_mobile if choice == "mobile" else ua_desktop
     try:
         waitSeconds = int(wait_entry.get())
@@ -116,6 +122,10 @@ def stop_script():
     global stop_flag
     stop_flag = True
     close_edge()
+
+def skip_current():
+    global skip_current_flag
+    skip_current_flag = True
 
 def update_profiles():
     """Regenerate checkbox berdasarkan start & end profile"""
@@ -148,7 +158,7 @@ def update_profiles():
 # ==== GUI ====
 root = tk.Tk()
 root.title("🌐 Edge Query Runner")
-root.geometry("850x550")
+root.geometry("900x600")
 root.configure(bg="#f0f2f5")
 
 style = ttk.Style(root)
@@ -183,12 +193,13 @@ ttk.Label(frame_time, text="Custom (detik, opsional):").pack(anchor="w")
 wait_entry = ttk.Entry(frame_time)
 wait_entry.pack(anchor="w", pady=5)
 
-# Tombol Start & Stop
+# Tombol Start, Stop, Skip
 frame_btn = tk.Frame(frame_left, bg="#f0f2f5")
 frame_btn.pack(pady=20)
 
 ttk.Button(frame_btn, text="▶ Start", command=start_script).pack(side="left", padx=10)
 ttk.Button(frame_btn, text="⏹ Stop", command=stop_script).pack(side="left", padx=10)
+ttk.Button(frame_btn, text="⏭ Skip", command=skip_current).pack(side="left", padx=10)
 
 # ========== KANAN ==========
 frame_right = ttk.Frame(paned, padding=10)
@@ -210,8 +221,8 @@ end_entry.pack(side="left")
 
 ttk.Button(frame_range, text="Update", command=update_profiles).pack(side="left", padx=10)
 
-# Frame Skip Profiles (scrollable)
-frame_skip = ttk.LabelFrame(frame_right, text="Skip Profiles", padding=5)
+# Frame Skip Profiles (checkbox manual)
+frame_skip = ttk.LabelFrame(frame_right, text="Skip Profiles (Checkbox)", padding=5)
 frame_skip.pack(fill="both", expand=True, pady=5)
 
 canvas = tk.Canvas(frame_skip, bg="#ffffff", highlightthickness=0)
