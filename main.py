@@ -181,13 +181,13 @@ def get_random_keyword():
             count = increment_keyword_count(keyword_text)
             
             # Immediately sync if count reaches deletion threshold
-            # if count >= 1:
-            #     sync_called_counts_with_db()
+            if count >= 5:
+                sync_called_counts_with_db()
                 
             return jsonify({
                 "keyword": keyword_text,
                 "count": count,
-                "deleted": count >= 1
+                "deleted": count >= 5
             })
                 
     except TimeoutError:
@@ -311,7 +311,7 @@ def sync_called_counts_with_db():
             
         # Clean up the counts file
         old_count = len(counts)
-        new_counts = {k: v for k, v in counts.items() if v < 1}
+        new_counts = {k: v for k, v in counts.items() if v < 5}
         save_called_counts(new_counts)
         logger.info(f"Cleaned counts file: removed {old_count - len(new_counts)} entries")
         logger.info(f"Final counts in file: {new_counts}")
