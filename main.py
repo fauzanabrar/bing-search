@@ -28,8 +28,8 @@ if not database_url:
 
 app.config['SQLALCHEMY_DATABASE_URI'] = database_url
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-app.config['SQLALCHEMY_POOL_SIZE'] = 10
-app.config['SQLALCHEMY_MAX_OVERFLOW'] = 50
+app.config['SQLALCHEMY_POOL_SIZE'] = 1
+app.config['SQLALCHEMY_MAX_OVERFLOW'] = 0
 app.config['SQLALCHEMY_POOL_TIMEOUT'] = 30  # seconds
 app.config['SQLALCHEMY_POOL_RECYCLE'] = 1800  # 30 minutes
 db = SQLAlchemy(app)
@@ -64,7 +64,9 @@ def retry_on_connection_error(max_retries=3, backoff_factor=1):
                 try:
                     return func(*args, **kwargs)
                 except psycopg2.OperationalError as e:
-                    if "connection refused" in str(e).lower() or "server running" in str(e).lower():
+                    if ("connection refused" in str(e).lower() or
+                        "server running" in str(e).lower() or
+                        "max clients" in str(e).lower()):
                         if attempt < max_retries - 1:
                             wait_time = backoff_factor * (2 ** attempt)
                             logger.warning(f"Connection error, retrying in {wait_time} seconds... (attempt {attempt + 1}/{max_retries})")
