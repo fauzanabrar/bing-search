@@ -12,6 +12,7 @@ import time
 import json
 from pathlib import Path
 import logging
+import psycopg2
 
 # Load environment variables from .env file
 load_dotenv()
@@ -27,8 +28,8 @@ if not database_url:
 
 app.config['SQLALCHEMY_DATABASE_URI'] = database_url
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-app.config['SQLALCHEMY_POOL_SIZE'] = 20
-app.config['SQLALCHEMY_MAX_OVERFLOW'] = 40
+app.config['SQLALCHEMY_POOL_SIZE'] = 10
+app.config['SQLALCHEMY_MAX_OVERFLOW'] = 50
 app.config['SQLALCHEMY_POOL_TIMEOUT'] = 30  # seconds
 app.config['SQLALCHEMY_POOL_RECYCLE'] = 1800  # 30 minutes
 db = SQLAlchemy(app)
@@ -53,6 +54,47 @@ with app.app_context():
     db.create_all()
     load_keywords()
 
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+def retry_on_connection_error(max_retries=3, backoff_factor=1):
+    def decorator(func):
+        def wrapper(*args, **kwargs):
+            for attempt in range(max_retries):
+                try:
+                    return func(*args, **kwargs)
+                except psycopg2.OperationalError as e:
+                    if "connection refused" in str(e).lower() or "server running" in str(e).lower():
+                        if attempt < max_retries - 1:
+                            wait_time = backoff_factor * (2 ** attempt)
+                            logger.warning(f"Connection error, retrying in {wait_time} seconds... (attempt {attempt + 1}/{max_retries})")
+                            time.sleep(wait_time)
+                        else:
+                            raise e
+                    else:
+                        raise e
+        return wrapper
+    return decorator
+
+@retry_on_connection_error()
+def process_batch(batch):
+    # Check existing keywords in batch
+    existing_keywords = set(k.keyword for k in
+        Keyword.query.filter(Keyword.keyword.in_(batch)).all())
+
+    # Prepare new keywords
+    new_records = []
+    for keyword_text in batch:
+        if keyword_text not in existing_keywords:
+            new_records.append(Keyword(keyword=keyword_text))
+
+    # Bulk insert new keywords
+    if new_records:
+        db.session.bulk_save_objects(new_records)
+        db.session.commit()
+
+    return len([k for k in batch if k not in existing_keywords]), len([k for k in batch if k in existing_keywords])
+
 @app.route("/")
 def home():
     return render_template("index.html")
@@ -65,49 +107,34 @@ def add_keywords():
 
     # Split keywords by newline and filter out empty lines
     keyword_list = [k.strip() for k in new_keywords.split('\n') if k.strip()]
-    
+
     success_count = 0
     duplicate_count = 0
-    batch_size = 100  # Process 100 keywords at a time
-    
+    batch_size = 10  # Reduced batch size to avoid overwhelming connections
+
     try:
         # Process keywords in batches
         for i in range(0, len(keyword_list), batch_size):
             batch = keyword_list[i:i + batch_size]
-            
-            # Check existing keywords in batch
-            existing_keywords = set(k.keyword for k in 
-                Keyword.query.filter(Keyword.keyword.in_(batch)).all())
-            
-            # Prepare new keywords
-            new_records = []
-            for keyword_text in batch:
-                if keyword_text not in existing_keywords:
-                    new_records.append(Keyword(keyword=keyword_text))
-                    success_count += 1
-                else:
-                    duplicate_count += 1
-            
-            # Bulk insert new keywords
-            if new_records:
-                db.session.bulk_save_objects(new_records)
-                db.session.commit()
-        
+            s, d = process_batch(batch)
+            success_count += s
+            duplicate_count += d
+
         # Reload keywords after all batches are processed
         load_keywords()
-        
+
         message = f"Added {success_count} keywords successfully"
         if duplicate_count > 0:
             message += f" ({duplicate_count} duplicates skipped)"
         return jsonify({"status": "success", "message": message})
-        
+
     except Exception as e:
         db.session.rollback()
         return jsonify({
-            "status": "error", 
+            "status": "error",
             "message": f"Error adding keywords: {str(e)}"
         }), 500
-            
+
     return jsonify({"status": "error", "message": "No keywords provided"}), 400
 
 @app.route("/refresh", methods=["POST"])
@@ -274,9 +301,6 @@ def increment_keyword_count(keyword):
     counts[keyword] = counts.get(keyword, 0) + 1
     save_called_counts(counts)
     return counts[keyword]
-
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
 
 def sync_called_counts_with_db():
     counts = load_called_counts()
