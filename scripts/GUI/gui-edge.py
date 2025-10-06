@@ -6,6 +6,11 @@ import platform
 import psutil
 import os
 import time
+import logging
+
+# ==== SETUP LOGGER ====
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 # ==== SETTINGAN PROFILE ====
 startProfile = 1
@@ -68,13 +73,13 @@ def close_edge():
             os.system("pkill -9 msedge")
 
 # ==== Jalankan query ====
-def run_queries(user_agent, skipProfiles, waitSeconds, progress_var):
+def run_queries(user_agent, skipProfiles, waitSeconds, progress_var, progress_offset=0, progress_max=100, show_message=True, on_complete=None, stop_event=None):
     global stop_flag, skip_current_flag
     total_profiles = endProfile - startProfile + 1
     query_count = len(queries)
 
     for idx, profileNum in enumerate(range(startProfile, endProfile + 1), 1):
-        if stop_flag:
+        if stop_flag or (stop_event and stop_event.is_set()):
             break
         if profileNum in skipProfiles:
             continue
@@ -87,7 +92,7 @@ def run_queries(user_agent, skipProfiles, waitSeconds, progress_var):
         subprocess.Popen(cmd)
 
         for sec in range(waitSeconds):
-            if stop_flag:
+            if stop_flag or (stop_event and stop_event.is_set()):
                 break
             if skip_current_flag:   # kalau tombol Skip ditekan
                 skip_current_flag = False
@@ -95,28 +100,46 @@ def run_queries(user_agent, skipProfiles, waitSeconds, progress_var):
             time.sleep(1)
 
         close_edge()
-        progress_var.set(int((idx / total_profiles) * 100))
+        progress_var.set(progress_offset + int((idx / total_profiles) * progress_max))
 
-    messagebox.showinfo("Selesai", "Script selesai atau dihentikan!")
+    progress_var.set(progress_offset + progress_max)
+    if show_message and not stop_flag and not (stop_event and stop_event.is_set()):
+        messagebox.showinfo("Selesai", "Script selesai atau dihentikan!")
+    if on_complete:
+        on_complete()
 
 def start_script():
     global stop_flag
     stop_flag = False
     choice = mode_var.get()
     if not choice:
-        messagebox.showerror("Error", "Pilih mode Mobile atau Desktop!")
+        messagebox.showerror("Error", "Pilih mode Mobile, Desktop, atau Desktop + Mobile!")
         return
 
     skipProfiles = [i for i, var in skip_vars.items() if var.get() == 1]
 
-    ua = ua_mobile if choice == "mobile" else ua_desktop
     try:
-        waitSeconds = int(wait_entry.get())
+        custom_wait = int(wait_entry.get())
     except ValueError:
-        waitSeconds = 800 if choice == "mobile" else 1100
+        custom_wait = None
 
-    t = threading.Thread(target=run_queries, args=(ua, skipProfiles, waitSeconds, progress_var))
-    t.start()
+    if choice == "desktop+mobile":
+        def start_mobile():
+            if not stop_flag:
+                # Then run mobile
+                wait_mobile = custom_wait if custom_wait is not None else 800
+                t2 = threading.Thread(target=run_queries, args=(ua_mobile, skipProfiles, wait_mobile, progress_var, 50, 50, True))
+                t2.start()
+
+        # Run desktop first
+        wait_desktop = custom_wait if custom_wait is not None else 1100
+        t1 = threading.Thread(target=run_queries, args=(ua_desktop, skipProfiles, wait_desktop, progress_var, 0, 50, False, start_mobile))
+        t1.start()
+    else:
+        ua = ua_mobile if choice == "mobile" else ua_desktop
+        waitSeconds = custom_wait if custom_wait is not None else (800 if choice == "mobile" else 1100)
+        t = threading.Thread(target=run_queries, args=(ua, skipProfiles, waitSeconds, progress_var))
+        t.start()
 
 def stop_script():
     global stop_flag
@@ -155,10 +178,74 @@ def update_profiles():
         skip_vars[i] = var
 
 
+# ==== SCHEDULER IMPLEMENTATION ====
+scheduler_thread = None
+scheduler_stop_event = threading.Event()
+
+def scheduler_task(interval_minutes):
+    logger.info(f"Scheduler started with interval {interval_minutes} minutes")
+    while not scheduler_stop_event.is_set():
+        logger.info("Scheduler running queries")
+        # Run queries with current mode and wait time
+        choice = mode_var.get()
+        if not choice:
+            logger.warning("No mode selected, skipping scheduled run")
+        else:
+            skipProfiles = [i for i, var in skip_vars.items() if var.get() == 1]
+            try:
+                custom_wait = int(wait_entry.get())
+            except ValueError:
+                custom_wait = None
+
+            if choice == "desktop+mobile":
+                def start_mobile():
+                    if not scheduler_stop_event.is_set():
+                        wait_mobile = custom_wait if custom_wait is not None else 800
+                        run_queries(ua_mobile, skipProfiles, wait_mobile, progress_var, 50, 50, False, stop_event=scheduler_stop_event)
+                wait_desktop = custom_wait if custom_wait is not None else 1100
+                run_queries(ua_desktop, skipProfiles, wait_desktop, progress_var, 0, 50, False, start_mobile, stop_event=scheduler_stop_event)
+            else:
+                ua = ua_mobile if choice == "mobile" else ua_desktop
+                waitSeconds = custom_wait if custom_wait is not None else (800 if choice == "mobile" else 1100)
+                run_queries(ua, skipProfiles, waitSeconds, progress_var, show_message=False, stop_event=scheduler_stop_event)
+
+        # Wait for the interval or stop event
+        if scheduler_stop_event.wait(interval_minutes * 60):
+            break
+    logger.info("Scheduler stopped")
+
+def start_scheduler():
+    global scheduler_thread, scheduler_stop_event
+    if scheduler_thread and scheduler_thread.is_alive():
+        messagebox.showinfo("Scheduler", "Scheduler is already running")
+        return
+    try:
+        interval = int(scheduler_interval_entry.get())
+        if interval <= 0:
+            raise ValueError
+    except ValueError:
+        messagebox.showerror("Error", "Please enter a valid positive integer for interval")
+        return
+    scheduler_stop_event.clear()
+    scheduler_thread = threading.Thread(target=scheduler_task, args=(interval,), daemon=True)
+    scheduler_thread.start()
+    scheduler_status_var.set(f"Scheduler running every {interval} minutes")
+    logger.info(f"Scheduler started with interval {interval} minutes")
+
+def stop_scheduler():
+    global scheduler_stop_event, scheduler_thread
+    if not scheduler_thread or not scheduler_thread.is_alive():
+        messagebox.showinfo("Scheduler", "Scheduler is not running")
+        return
+    scheduler_stop_event.set()
+    scheduler_thread.join(timeout=5)  # Wait for thread to finish
+    scheduler_status_var.set("Scheduler stopped")
+    logger.info("Scheduler stopped")
+
 # ==== GUI ====
 root = tk.Tk()
 root.title("🌐 Edge Query Runner")
-root.geometry("900x600")
+root.geometry("900x650")
 root.configure(bg="#f0f2f5")
 
 style = ttk.Style(root)
@@ -184,6 +271,7 @@ frame_mode.pack(fill="x", pady=5)
 mode_var = tk.StringVar(value="")
 ttk.Radiobutton(frame_mode, text="📱 Mobile", variable=mode_var, value="mobile").pack(anchor="w", pady=2)
 ttk.Radiobutton(frame_mode, text="💻 Desktop", variable=mode_var, value="desktop").pack(anchor="w", pady=2)
+ttk.Radiobutton(frame_mode, text="💻📱 Desktop + Mobile", variable=mode_var, value="desktop+mobile").pack(anchor="w", pady=2)
 
 # Frame Waktu
 frame_time = ttk.LabelFrame(frame_left, text="Waktu Tunggu", padding=10)
@@ -192,6 +280,25 @@ frame_time.pack(fill="x", pady=5)
 ttk.Label(frame_time, text="Custom (detik, opsional):").pack(anchor="w")
 wait_entry = ttk.Entry(frame_time)
 wait_entry.pack(anchor="w", pady=5)
+
+# Frame Scheduler
+frame_scheduler = ttk.LabelFrame(frame_left, text="Scheduler", padding=10)
+frame_scheduler.pack(fill="x", pady=5)
+
+ttk.Label(frame_scheduler, text="Interval (minutes):").pack(anchor="w")
+scheduler_interval_entry = ttk.Entry(frame_scheduler)
+scheduler_interval_entry.pack(anchor="w", pady=5)
+scheduler_interval_entry.insert(0, "10")
+
+scheduler_status_var = tk.StringVar(value="Scheduler stopped")
+scheduler_status_label = ttk.Label(frame_scheduler, textvariable=scheduler_status_var)
+scheduler_status_label.pack(anchor="w", pady=5)
+
+scheduler_btn_frame = ttk.Frame(frame_scheduler)
+scheduler_btn_frame.pack(anchor="w", pady=5)
+
+ttk.Button(scheduler_btn_frame, text="▶ Start Scheduler", command=start_scheduler).pack(side="left", padx=5)
+ttk.Button(scheduler_btn_frame, text="⏹ Stop Scheduler", command=stop_scheduler).pack(side="left", padx=5)
 
 # Tombol Start, Stop, Skip
 frame_btn = tk.Frame(frame_left, bg="#f0f2f5")
