@@ -573,6 +573,14 @@ frame_window = canvas.create_window((0, 0), window=scrollable_frame, anchor="nw"
 canvas.bind("<Configure>", resize_canvas)
 canvas.configure(yscrollcommand=scrollbar.set)
 
+def bind_scroll(widget, target_canvas):
+    def _on_mousewheel(event):
+        target_canvas.yview_scroll(int(-1 * (event.delta / 120)), "units")
+        return "break"
+    widget.bind_all("<MouseWheel>", _on_mousewheel)
+
+bind_scroll(scrollable_frame, canvas)
+
 canvas.pack(side="left", fill="both", expand=True)
 scrollbar.pack(side="right", fill="y")
 
