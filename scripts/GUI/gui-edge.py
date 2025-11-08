@@ -16,7 +16,40 @@ logger = logging.getLogger(__name__)
 startProfile = 1
 endProfile = 6
 searchEngine = "https://www.google.com/search?q="
-edgePath = r"C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe" if platform.system() == "Windows" else "/usr/bin/microsoft-edge"
+
+system_name = platform.system()
+
+BROWSERS = {
+    "edge": {
+        "label": "Microsoft Edge",
+        "default_path": r"C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe" if system_name == "Windows" else "/usr/bin/microsoft-edge",
+        "process_names": ["msedge.exe", "msedge"],
+        "profile_args": lambda profile: [f"--profile-directory=Profile {profile}"],
+        "user_agent_flag": "--user-agent={user_agent}",
+        "supports_user_agent": True,
+    },
+    "chrome": {
+        "label": "Google Chrome",
+        "default_path": r"C:\Program Files\Google\Chrome\Application\chrome.exe" if system_name == "Windows" else "/usr/bin/google-chrome",
+        "process_names": ["chrome.exe", "chrome"],
+        "profile_args": lambda profile: [f"--profile-directory=Profile {profile}"],
+        "user_agent_flag": "--user-agent={user_agent}",
+        "supports_user_agent": True,
+    },
+    "firefox": {
+        "label": "Mozilla Firefox",
+        "default_path": r"C:\Program Files\Mozilla Firefox\firefox.exe" if system_name == "Windows" else "/usr/bin/firefox",
+        "process_names": ["firefox.exe", "firefox"],
+        "profile_args": lambda profile: ["-P", f"Profile {profile}", "-no-remote"],
+        "user_agent_flag": None,
+        "supports_user_agent": False,
+    },
+}
+
+BROWSER_LABEL_TO_KEY = {data["label"]: key for key, data in BROWSERS.items()}
+DEFAULT_BROWSER_KEY = "edge"
+DEFAULT_BROWSER_LABEL = BROWSERS[DEFAULT_BROWSER_KEY]["label"]
+custom_browser_paths = {key: data["default_path"] for key, data in BROWSERS.items()}
 
 # ==== DAFTAR QUERY ====
 queries = [
@@ -55,28 +88,116 @@ ua_mobile = "Mozilla/5.0 (iPhone; CPU iPhone OS 15_0 like Mac OS X) AppleWebKit/
 stop_flag = False
 skip_current_flag = False
 skip_vars = {}
+active_browser_key = DEFAULT_BROWSER_KEY
+current_browser_selection = {"key": DEFAULT_BROWSER_KEY}
 
-# ==== CLOSE EDGE CROSS-PLATFORM ====
-def close_edge():
+
+def remember_browser_path(browser_key, path_value):
+    """Store the last-used executable path per browser so switching preserves overrides."""
+    if path_value:
+        custom_browser_paths[browser_key] = path_value
+
+
+def resolve_browser_settings():
+    """Return (browser_key, executable_path) while validating the selection."""
+    browser_key = get_selected_browser_key()
+    selected_path = ""
+    if "browser_path_var" in globals():
+        selected_path = (browser_path_var.get() or "").strip()
+    path_value = selected_path or custom_browser_paths.get(browser_key) or BROWSERS[browser_key]["default_path"]
+    if not path_value:
+        raise ValueError("Path browser tidak ditemukan.")
+    if not os.path.exists(path_value):
+        raise FileNotFoundError(path_value)
+    remember_browser_path(browser_key, path_value)
+    return browser_key, path_value
+
+
+def build_browser_command(browser_key, browser_path, profile_num, user_agent, url):
+    config = BROWSERS.get(browser_key, BROWSERS[DEFAULT_BROWSER_KEY])
+    cmd = [browser_path]
+    profile_builder = config.get("profile_args")
+    if profile_builder:
+        cmd.extend(profile_builder(profile_num))
+
+    ua_flag = config.get("user_agent_flag")
+    if ua_flag:
+        cmd.append(ua_flag.format(user_agent=user_agent))
+    elif not config.get("supports_user_agent", True):
+        logger.debug("Browser %s tidak mendukung override user agent per-run", config["label"])
+
+    cmd.append(url)
+    return cmd
+
+
+def is_process_running(target_names):
+    target_lower = tuple(name.lower() for name in target_names)
+    for proc in psutil.process_iter(attrs=["name"]):
+        try:
+            name = (proc.info.get("name") or "").lower()
+        except (psutil.NoSuchProcess, psutil.AccessDenied):
+            continue
+        if any(name == target for target in target_lower):
+            return True
+    return False
+
+
+def close_browser(browser_key):
+    config = BROWSERS.get(browser_key, BROWSERS[DEFAULT_BROWSER_KEY])
+    process_names = config["process_names"]
     system = platform.system()
+
     if system == "Windows":
-        os.system("taskkill /im msedge.exe >nul 2>&1")
+        for name in process_names:
+            os.system(f"taskkill /im {name} >nul 2>&1")
         time.sleep(3)
-        still_running = any("msedge.exe" in (p.name() or "") for p in psutil.process_iter())
-        if still_running:
-            os.system("taskkill /im msedge.exe /f >nul 2>&1")
+        if is_process_running(process_names):
+            for name in process_names:
+                os.system(f"taskkill /im {name} /f >nul 2>&1")
     else:
-        os.system("pkill -15 msedge")
+        for name in process_names:
+            os.system(f"pkill -15 {name}")
         time.sleep(3)
-        still_running = any("msedge" in (p.name() or "") for p in psutil.process_iter())
-        if still_running:
-            os.system("pkill -9 msedge")
+        if is_process_running(process_names):
+            for name in process_names:
+                os.system(f"pkill -9 {name}")
+
+
+def get_selected_browser_key():
+    if "browser_choice_var" in globals():
+        label = browser_choice_var.get()
+    else:
+        label = DEFAULT_BROWSER_LABEL
+    return BROWSER_LABEL_TO_KEY.get(label, DEFAULT_BROWSER_KEY)
+
+
+def on_browser_change(event=None):
+    prev_key = current_browser_selection.get("key", DEFAULT_BROWSER_KEY)
+    previous_value = ""
+    if "browser_path_var" in globals():
+        previous_value = (browser_path_var.get() or "").strip()
+    remember_browser_path(prev_key, previous_value or custom_browser_paths.get(prev_key) or BROWSERS[prev_key]["default_path"])
+
+    new_key = get_selected_browser_key()
+    current_browser_selection["key"] = new_key
+    if "browser_path_var" in globals():
+        browser_path_var.set(custom_browser_paths.get(new_key) or BROWSERS[new_key]["default_path"])
+
+
+def persist_browser_path(event=None):
+    if "browser_path_var" in globals():
+        remember_browser_path(get_selected_browser_key(), (browser_path_var.get() or "").strip())
 
 # ==== Jalankan query ====
-def run_queries(user_agent, skipProfiles, waitSeconds, progress_var, progress_offset=0, progress_max=100, show_message=True, on_complete=None, stop_event=None):
+def run_queries(user_agent, skipProfiles, waitSeconds, progress_var, progress_offset=0, progress_max=100, show_message=True, on_complete=None, stop_event=None, browser_key=DEFAULT_BROWSER_KEY, browser_path=None):
     global stop_flag, skip_current_flag
     total_profiles = endProfile - startProfile + 1
     query_count = len(queries)
+    executable_path = browser_path or custom_browser_paths.get(browser_key) or BROWSERS[browser_key]["default_path"]
+
+    if not executable_path:
+        logger.error("Browser path tidak valid untuk %s", browser_key)
+        return
 
     for idx, profileNum in enumerate(range(startProfile, endProfile + 1), 1):
         if stop_flag or (stop_event and stop_event.is_set()):
@@ -87,9 +208,13 @@ def run_queries(user_agent, skipProfiles, waitSeconds, progress_var, progress_of
         query = queries[(profileNum - startProfile) % query_count]
         url = searchEngine + query.replace(" ", "+")
 
-        cmd = [edgePath, f'--profile-directory=Profile {profileNum}',
-               f'--user-agent={user_agent}', url]
-        subprocess.Popen(cmd)
+        cmd = build_browser_command(browser_key, executable_path, profileNum, user_agent, url)
+        try:
+            subprocess.Popen(cmd)
+        except FileNotFoundError:
+            logger.error("Executable %s tidak ditemukan. Hentikan run.", executable_path)
+            messagebox.showerror("Browser tidak ditemukan", f"File {executable_path} tidak ditemukan.")
+            break
 
         for sec in range(waitSeconds):
             if stop_flag or (stop_event and stop_event.is_set()):
@@ -99,7 +224,7 @@ def run_queries(user_agent, skipProfiles, waitSeconds, progress_var, progress_of
                 break
             time.sleep(1)
 
-        close_edge()
+        close_browser(browser_key)
         progress_var.set(progress_offset + int((idx / total_profiles) * progress_max))
 
     progress_var.set(progress_offset + progress_max)
@@ -109,12 +234,29 @@ def run_queries(user_agent, skipProfiles, waitSeconds, progress_var, progress_of
         on_complete()
 
 def start_script():
-    global stop_flag
+    global stop_flag, active_browser_key
     stop_flag = False
     choice = mode_var.get()
     if not choice:
         messagebox.showerror("Error", "Pilih mode Mobile, Desktop, atau Desktop + Mobile!")
         return
+
+    try:
+        browser_key, browser_path = resolve_browser_settings()
+    except FileNotFoundError as e:
+        messagebox.showerror("Browser tidak ditemukan", f"Path browser tidak valid:\n{e}")
+        return
+    except ValueError as e:
+        messagebox.showerror("Browser error", str(e))
+        return
+
+    active_browser_key = browser_key
+    if not BROWSERS[browser_key]["supports_user_agent"]:
+        messagebox.showinfo(
+            "User-Agent default",
+            "Mozilla Firefox tidak mendukung override user-agent melalui script ini.\n"
+            "Mode Mobile atau Desktop akan menggunakan user-agent bawaan.",
+        )
 
     skipProfiles = [i for i, var in skip_vars.items() if var.get() == 1]
 
@@ -123,28 +265,42 @@ def start_script():
     except ValueError:
         custom_wait = None
 
+    run_kwargs = {"browser_key": browser_key, "browser_path": browser_path}
+
     if choice == "desktop+mobile":
         def start_mobile():
             if not stop_flag:
                 # Then run mobile
                 wait_mobile = custom_wait if custom_wait is not None else 800
-                t2 = threading.Thread(target=run_queries, args=(ua_mobile, skipProfiles, wait_mobile, progress_var, 50, 50, True))
+                t2 = threading.Thread(
+                    target=run_queries,
+                    args=(ua_mobile, skipProfiles, wait_mobile, progress_var, 50, 50, True),
+                    kwargs=run_kwargs.copy()
+                )
                 t2.start()
 
         # Run desktop first
         wait_desktop = custom_wait if custom_wait is not None else 1100
-        t1 = threading.Thread(target=run_queries, args=(ua_desktop, skipProfiles, wait_desktop, progress_var, 0, 50, False, start_mobile))
+        t1 = threading.Thread(
+            target=run_queries,
+            args=(ua_desktop, skipProfiles, wait_desktop, progress_var, 0, 50, False, start_mobile),
+            kwargs=run_kwargs.copy()
+        )
         t1.start()
     else:
         ua = ua_mobile if choice == "mobile" else ua_desktop
         waitSeconds = custom_wait if custom_wait is not None else (800 if choice == "mobile" else 1100)
-        t = threading.Thread(target=run_queries, args=(ua, skipProfiles, waitSeconds, progress_var))
+        t = threading.Thread(
+            target=run_queries,
+            args=(ua, skipProfiles, waitSeconds, progress_var),
+            kwargs=run_kwargs.copy()
+        )
         t.start()
 
 def stop_script():
     global stop_flag
     stop_flag = True
-    close_edge()
+    close_browser(active_browser_key if active_browser_key else get_selected_browser_key())
 
 def skip_current():
     global skip_current_flag
@@ -182,7 +338,7 @@ def update_profiles():
 scheduler_thread = None
 scheduler_stop_event = threading.Event()
 
-def scheduler_task(interval_minutes):
+def scheduler_task(interval_minutes, browser_key, browser_path):
     logger.info(f"Scheduler started with interval {interval_minutes} minutes")
     while not scheduler_stop_event.is_set():
         logger.info("Scheduler running queries")
@@ -201,13 +357,13 @@ def scheduler_task(interval_minutes):
                 def start_mobile():
                     if not scheduler_stop_event.is_set():
                         wait_mobile = custom_wait if custom_wait is not None else 800
-                        run_queries(ua_mobile, skipProfiles, wait_mobile, progress_var, 50, 50, False, stop_event=scheduler_stop_event)
+                        run_queries(ua_mobile, skipProfiles, wait_mobile, progress_var, 50, 50, False, stop_event=scheduler_stop_event, browser_key=browser_key, browser_path=browser_path)
                 wait_desktop = custom_wait if custom_wait is not None else 1100
-                run_queries(ua_desktop, skipProfiles, wait_desktop, progress_var, 0, 50, False, start_mobile, stop_event=scheduler_stop_event)
+                run_queries(ua_desktop, skipProfiles, wait_desktop, progress_var, 0, 50, False, start_mobile, stop_event=scheduler_stop_event, browser_key=browser_key, browser_path=browser_path)
             else:
                 ua = ua_mobile if choice == "mobile" else ua_desktop
                 waitSeconds = custom_wait if custom_wait is not None else (800 if choice == "mobile" else 1100)
-                run_queries(ua, skipProfiles, waitSeconds, progress_var, show_message=False, stop_event=scheduler_stop_event)
+                run_queries(ua, skipProfiles, waitSeconds, progress_var, show_message=False, stop_event=scheduler_stop_event, browser_key=browser_key, browser_path=browser_path)
 
         # Wait for the interval or stop event
         if scheduler_stop_event.wait(interval_minutes * 60):
@@ -215,7 +371,7 @@ def scheduler_task(interval_minutes):
     logger.info("Scheduler stopped")
 
 def start_scheduler():
-    global scheduler_thread, scheduler_stop_event
+    global scheduler_thread, scheduler_stop_event, active_browser_key
     if scheduler_thread and scheduler_thread.is_alive():
         messagebox.showinfo("Scheduler", "Scheduler is already running")
         return
@@ -226,8 +382,18 @@ def start_scheduler():
     except ValueError:
         messagebox.showerror("Error", "Please enter a valid positive integer for interval")
         return
+    try:
+        browser_key, browser_path = resolve_browser_settings()
+    except FileNotFoundError as e:
+        messagebox.showerror("Browser tidak ditemukan", f"Path browser tidak valid:\n{e}")
+        return
+    except ValueError as e:
+        messagebox.showerror("Browser error", str(e))
+        return
+
+    active_browser_key = browser_key
     scheduler_stop_event.clear()
-    scheduler_thread = threading.Thread(target=scheduler_task, args=(interval,), daemon=True)
+    scheduler_thread = threading.Thread(target=scheduler_task, args=(interval, browser_key, browser_path), daemon=True)
     scheduler_thread.start()
     scheduler_status_var.set(f"Scheduler running every {interval} minutes")
     logger.info(f"Scheduler started with interval {interval} minutes")
@@ -272,6 +438,32 @@ mode_var = tk.StringVar(value="")
 ttk.Radiobutton(frame_mode, text="📱 Mobile", variable=mode_var, value="mobile").pack(anchor="w", pady=2)
 ttk.Radiobutton(frame_mode, text="💻 Desktop", variable=mode_var, value="desktop").pack(anchor="w", pady=2)
 ttk.Radiobutton(frame_mode, text="💻📱 Desktop + Mobile", variable=mode_var, value="desktop+mobile").pack(anchor="w", pady=2)
+
+# Frame Browser
+frame_browser = ttk.LabelFrame(frame_left, text="Browser", padding=10)
+frame_browser.pack(fill="x", pady=5)
+
+browser_choice_var = tk.StringVar(value=DEFAULT_BROWSER_LABEL)
+browser_path_var = tk.StringVar(value=BROWSERS[DEFAULT_BROWSER_KEY]["default_path"])
+browser_labels = [data["label"] for data in BROWSERS.values()]
+
+ttk.Label(frame_browser, text="Pilih Browser:").pack(anchor="w")
+browser_combo = ttk.Combobox(
+    frame_browser,
+    textvariable=browser_choice_var,
+    state="readonly",
+    values=browser_labels
+)
+browser_combo.pack(fill="x", pady=5)
+if DEFAULT_BROWSER_LABEL in browser_labels:
+    browser_combo.current(browser_labels.index(DEFAULT_BROWSER_LABEL))
+browser_combo.bind("<<ComboboxSelected>>", on_browser_change)
+
+ttk.Label(frame_browser, text="Path Executable:").pack(anchor="w")
+browser_path_entry = ttk.Entry(frame_browser, textvariable=browser_path_var)
+browser_path_entry.pack(fill="x", pady=5)
+browser_path_entry.bind("<FocusOut>", persist_browser_path)
+browser_path_entry.bind("<Return>", persist_browser_path)
 
 # Frame Waktu
 frame_time = ttk.LabelFrame(frame_left, text="Waktu Tunggu", padding=10)

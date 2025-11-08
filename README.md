@@ -4,7 +4,7 @@ Tools for managing long keyword lists, distributing them to automation clients, 
 
 - **Flask API (`main.py`)** – stores keywords in PostgreSQL, exposes endpoints and a small UI for loading, sampling, deleting, and monitoring keywords.
 - **Maintenance scripts** – e.g., `refresh_keywords.py` for pruning exhausted keywords or converting legacy text files to SQL.
-- **Edge automation GUI (`scripts/GUI/gui-edge.py`)** – Tkinter desktop app that opens Edge profiles with rotating queries (mobile, desktop, or both) and ships with scheduling controls. It can be converted to an `.exe` via PyInstaller.
+- **Browser automation GUI (`scripts/GUI/gui-edge.py`)** – Tkinter desktop app that opens Edge/Chrome/Firefox profiles with rotating queries (mobile, desktop, or both) and ships with scheduling controls. It can be converted to an `.exe` via PyInstaller.
 
 ---
 
@@ -17,7 +17,7 @@ Tools for managing long keyword lists, distributing them to automation clients, 
 | `keywords_called.txt` | Tracks how often a keyword was issued; when a keyword exceeds the threshold it will be deleted from PostgreSQL. |
 | `refresh_keywords.py` | Cleans both keyword files by dropping entries that were called ≥6 times (legacy workflow). |
 | `scripts/convert-sql.py`, `scripts/keyword.txt` | Converts a plain text list into `insert.sql` statements for bulk loading into PostgreSQL. |
-| `scripts/GUI/gui-edge.py` | Tkinter automation GUI; `scripts/GUI/dist/` holds PyInstaller artifacts. |
+| `scripts/GUI/gui-edge.py` | Tkinter automation GUI (Edge/Chrome/Firefox); `scripts/GUI/dist/` holds PyInstaller artifacts. |
 
 ---
 
@@ -25,7 +25,7 @@ Tools for managing long keyword lists, distributing them to automation clients, 
 
 - **Python** 3.10+ (Tkinter bundled on Windows/macOS; on some Linux distros install `python3-tk` separately).
 - **PostgreSQL** database reachable via a SQLAlchemy URL.
-- **Microsoft Edge** installed (default path: `C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe`). Adjust `edgePath` in `gui-edge.py` if needed.
+- **Microsoft Edge**, **Google Chrome**, or **Mozilla Firefox** installed (the GUI ships with default paths for each, and you can override them per browser).
 - **pip** + virtual environment tooling (`python -m venv .venv` recommended).
 - Optional: **PyInstaller** 6.x for packaging the GUI.
 
@@ -100,7 +100,7 @@ During startup SQLAlchemy will call `db.create_all()` to build the `keyword` tab
 
 ---
 
-## Edge Automation GUI (`scripts/GUI/gui-edge.py`)
+## Browser Automation GUI (`scripts/GUI/gui-edge.py`)
 
 Run from source:
 
@@ -110,6 +110,7 @@ python scripts/GUI/gui-edge.py
 
 Features:
 
+- Choose **Edge**, **Chrome**, or **Firefox**, and override the executable path if it lives somewhere else. Paths are remembered per browser so you can switch back and forth quickly (Firefox will always use its built-in user agent).
 - Choose **Mobile**, **Desktop**, or **Desktop + Mobile** user-agents (Edge is launched with `--user-agent`).
 - Specify **Start/End profile numbers** (`Profile 1` … `Profile N`), regenerate checkbox list, and skip specific profiles.
 - **Wait time** field (seconds) overrides default dwell durations (1100 seconds desktop, 800 seconds mobile).
@@ -120,9 +121,11 @@ Features:
 - Built-in **Scheduler** can rerun the current mode every _N_ minutes (runs on a daemon thread and shares the same start/stop flags).
 - Progress bar gives per-run progress (0–50 Desktop, 50–100 Mobile when both modes are enabled).
 
+> ⚠️ Firefox does not expose a command-line flag for overriding the user-agent, so both Mobile and Desktop modes use Firefox’s default UA. Edge/Chrome runs still honor the per-mode overrides.
+
 Customizing:
 
-- Update the `queries` list, `startProfile/endProfile`, `searchEngine`, or `edgePath` constants in the script to match your workflow.
+- Update the `queries` list, `startProfile/endProfile`, or `searchEngine` constants in the script to match your workflow. Executable paths can be changed directly from the GUI (and are remembered per browser).
 - The GUI uses standard Tkinter themes; feel free to adjust fonts or colors for your display.
 
 ---
@@ -164,7 +167,7 @@ To regenerate a clean build, delete `build/` and `dist/` (or the folders under `
 
 - **psycopg2 OperationalError / connection refused** – ensure your `DATABASE_URL` points to a reachable PostgreSQL instance. The built-in `retry_on_connection_error` decorator retries with exponential backoff; persistent failures will bubble up in the server logs.
 - **`keywords_called.txt` not updating** – confirm the Flask app has write permissions inside the project directory. The file is rewritten after every `/keyword` call.
-- **Edge path differs** – edit `edgePath` (e.g., to `%ProgramFiles%\\Microsoft\\Edge\\Application\\msedge.exe` or a Canary build) or make it configurable via environment variables.
+- **Browser path differs** – update the GUI’s executable path field per browser (defaults cover standard install locations on Windows/Linux). The script remembers your overrides.
 - **Tkinter missing on Linux** – install the OS package (`sudo apt install python3-tk`) before running the GUI or PyInstaller.
 - **Encoding errors installing requirements** – re-save `requirements.txt` as UTF-8 in your editor, or feed it through `iconv` as mentioned earlier.
 - **Testing** – run the Flask app and visit `/keywords` to make sure counts move as you trigger `/keyword`. For the GUI, use short wait times (e.g., 5–10 seconds) when testing so that Edge sessions close quickly.
