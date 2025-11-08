@@ -410,124 +410,156 @@ def stop_scheduler():
 
 # ==== GUI ====
 root = tk.Tk()
-root.title("🌐 Edge Query Runner")
-root.geometry("900x650")
-root.configure(bg="#f0f2f5")
+root.title("🌐 Browser Query Runner")
+root.geometry("960x640")
+root.minsize(900, 700)
+root.configure(bg="#f6f8fb")
 
 style = ttk.Style(root)
 style.theme_use("clam")
 style.configure("TButton", font=("Segoe UI", 11), padding=6)
-style.configure("TLabel", font=("Segoe UI", 10))
+style.configure("TLabel", font=("Segoe UI", 10), background="#f6f8fb")
+style.configure("Main.TFrame", background="#f6f8fb")
+style.configure("Card.TLabelframe", background="#ffffff", relief="ridge", borderwidth=1)
+style.configure("Card.TLabelframe.Label", background="#ffffff", font=("Segoe UI", 11, "bold"))
+style.configure("Card.TFrame", background="#ffffff")
 style.configure("Vertical.TScrollbar", gripcount=0,
-                background="#d9d9d9", troughcolor="#f0f2f5",
-                bordercolor="#f0f2f5", arrowcolor="#333")
+                background="#cfd8e3", troughcolor="#ecf0f7",
+                bordercolor="#ecf0f7", arrowcolor="#4b5874")
 
-# Paned Window (bagi kiri & kanan)
-paned = ttk.PanedWindow(root, orient="horizontal")
-paned.pack(fill="both", expand=True, padx=10, pady=10)
+header = ttk.Frame(root, padding=(16, 14), style="Main.TFrame")
+header.pack(fill="x")
+ttk.Label(header, text="Browser Query Runner", font=("Segoe UI Semibold", 18), background="#f6f8fb").pack(anchor="w")
+ttk.Label(
+    header,
+    text="Semua pengaturan run dan profil kini dikelompokkan supaya mudah terlihat.",
+    font=("Segoe UI", 10),
+    background="#f6f8fb"
+).pack(anchor="w", pady=(4, 0))
+
+content = ttk.Frame(root, padding=(16, 0, 16, 16), style="Main.TFrame")
+content.pack(fill="both", expand=True)
+content.columnconfigure(0, weight=1)
+content.columnconfigure(1, weight=1)
 
 # ========== KIRI ==========
-frame_left = ttk.Frame(paned, padding=10)
-paned.add(frame_left, weight=1)
+left_column = ttk.Frame(content, style="Main.TFrame")
+left_column.grid(row=0, column=0, sticky="nsew", padx=(0, 12))
 
-# Frame Mode
-frame_mode = ttk.LabelFrame(frame_left, text="Pilih Mode", padding=10)
-frame_mode.pack(fill="x", pady=5)
+mode_browser = ttk.LabelFrame(left_column, text="Mode & Browser", padding=12, style="Card.TLabelframe")
+mode_browser.pack(fill="x", pady=(0, 12))
+mode_browser.columnconfigure(0, weight=1)
+mode_browser.columnconfigure(1, weight=1)
+
+mode_container = ttk.Frame(mode_browser, style="Card.TFrame")
+mode_container.grid(row=0, column=0, sticky="nsew", padx=(0, 8))
 
 mode_var = tk.StringVar(value="")
-ttk.Radiobutton(frame_mode, text="📱 Mobile", variable=mode_var, value="mobile").pack(anchor="w", pady=2)
-ttk.Radiobutton(frame_mode, text="💻 Desktop", variable=mode_var, value="desktop").pack(anchor="w", pady=2)
-ttk.Radiobutton(frame_mode, text="💻📱 Desktop + Mobile", variable=mode_var, value="desktop+mobile").pack(anchor="w", pady=2)
+ttk.Label(mode_container, text="Mode pencarian:", background="#ffffff").pack(anchor="w", pady=(0, 4))
+ttk.Radiobutton(mode_container, text="📱 Mobile", variable=mode_var, value="mobile").pack(anchor="w", pady=2)
+ttk.Radiobutton(mode_container, text="💻 Desktop", variable=mode_var, value="desktop").pack(anchor="w", pady=2)
+ttk.Radiobutton(mode_container, text="💻📱 Desktop + Mobile", variable=mode_var, value="desktop+mobile").pack(anchor="w", pady=2)
 
-# Frame Browser
-frame_browser = ttk.LabelFrame(frame_left, text="Browser", padding=10)
-frame_browser.pack(fill="x", pady=5)
+browser_container = ttk.Frame(mode_browser, style="Card.TFrame")
+browser_container.grid(row=0, column=1, sticky="nsew", padx=(8, 0))
 
 browser_choice_var = tk.StringVar(value=DEFAULT_BROWSER_LABEL)
 browser_path_var = tk.StringVar(value=BROWSERS[DEFAULT_BROWSER_KEY]["default_path"])
 browser_labels = [data["label"] for data in BROWSERS.values()]
 
-ttk.Label(frame_browser, text="Pilih Browser:").pack(anchor="w")
+ttk.Label(browser_container, text="Browser:", background="#ffffff").pack(anchor="w")
 browser_combo = ttk.Combobox(
-    frame_browser,
+    browser_container,
     textvariable=browser_choice_var,
     state="readonly",
     values=browser_labels
 )
-browser_combo.pack(fill="x", pady=5)
+browser_combo.pack(fill="x", pady=4)
 if DEFAULT_BROWSER_LABEL in browser_labels:
     browser_combo.current(browser_labels.index(DEFAULT_BROWSER_LABEL))
 browser_combo.bind("<<ComboboxSelected>>", on_browser_change)
 
-ttk.Label(frame_browser, text="Path Executable:").pack(anchor="w")
-browser_path_entry = ttk.Entry(frame_browser, textvariable=browser_path_var)
-browser_path_entry.pack(fill="x", pady=5)
+ttk.Label(browser_container, text="Path executable:", background="#ffffff").pack(anchor="w", pady=(6, 0))
+browser_path_entry = ttk.Entry(browser_container, textvariable=browser_path_var)
+browser_path_entry.pack(fill="x", pady=4)
 browser_path_entry.bind("<FocusOut>", persist_browser_path)
 browser_path_entry.bind("<Return>", persist_browser_path)
 
-# Frame Waktu
-frame_time = ttk.LabelFrame(frame_left, text="Waktu Tunggu", padding=10)
-frame_time.pack(fill="x", pady=5)
+timing_controls = ttk.LabelFrame(left_column, text="Timing & Kontrol", padding=12, style="Card.TLabelframe")
+timing_controls.pack(fill="x", pady=(0, 12))
 
-ttk.Label(frame_time, text="Custom (detik, opsional):").pack(anchor="w")
-wait_entry = ttk.Entry(frame_time)
-wait_entry.pack(anchor="w", pady=5)
+ttk.Label(timing_controls, text="Custom wait (detik, opsional):", background="#ffffff").pack(anchor="w")
+wait_entry = ttk.Entry(timing_controls)
+wait_entry.pack(anchor="w", pady=4)
+ttk.Label(
+    timing_controls,
+    text="Kosongkan untuk pakai default (1100s Desktop / 800s Mobile).",
+    background="#ffffff"
+).pack(anchor="w", pady=(0, 8))
 
-# Frame Scheduler
-frame_scheduler = ttk.LabelFrame(frame_left, text="Scheduler", padding=10)
-frame_scheduler.pack(fill="x", pady=5)
+button_row = ttk.Frame(timing_controls, style="Card.TFrame")
+button_row.pack(fill="x", pady=(0, 10))
+ttk.Button(button_row, text="▶ Start", command=start_script).pack(side="left", expand=True, padx=4)
+ttk.Button(button_row, text="⏹ Stop", command=stop_script).pack(side="left", expand=True, padx=4)
+ttk.Button(button_row, text="⏭ Skip", command=skip_current).pack(side="left", expand=True, padx=4)
 
-ttk.Label(frame_scheduler, text="Interval (minutes):").pack(anchor="w")
-scheduler_interval_entry = ttk.Entry(frame_scheduler)
-scheduler_interval_entry.pack(anchor="w", pady=5)
+progress_var = tk.IntVar()
+progress = ttk.Progressbar(timing_controls, variable=progress_var, maximum=100)
+progress.pack(fill="x")
+ttk.Label(timing_controls, text="Progress run tampil di sini.", background="#ffffff").pack(anchor="w", pady=(6, 0))
+
+# Scheduler
+scheduler_frame = ttk.LabelFrame(left_column, text="Scheduler", padding=12, style="Card.TLabelframe")
+scheduler_frame.pack(fill="x")
+
+ttk.Label(scheduler_frame, text="Interval (menit):", background="#ffffff").pack(anchor="w")
+scheduler_interval_entry = ttk.Entry(scheduler_frame)
+scheduler_interval_entry.pack(anchor="w", pady=4)
 scheduler_interval_entry.insert(0, "10")
 
 scheduler_status_var = tk.StringVar(value="Scheduler stopped")
-scheduler_status_label = ttk.Label(frame_scheduler, textvariable=scheduler_status_var)
-scheduler_status_label.pack(anchor="w", pady=5)
+scheduler_status_label = ttk.Label(scheduler_frame, textvariable=scheduler_status_var, background="#ffffff")
+scheduler_status_label.pack(anchor="w", pady=4)
 
-scheduler_btn_frame = ttk.Frame(frame_scheduler)
-scheduler_btn_frame.pack(anchor="w", pady=5)
-
-ttk.Button(scheduler_btn_frame, text="▶ Start Scheduler", command=start_scheduler).pack(side="left", padx=5)
-ttk.Button(scheduler_btn_frame, text="⏹ Stop Scheduler", command=stop_scheduler).pack(side="left", padx=5)
-
-# Tombol Start, Stop, Skip
-frame_btn = tk.Frame(frame_left, bg="#f0f2f5")
-frame_btn.pack(pady=20)
-
-ttk.Button(frame_btn, text="▶ Start", command=start_script).pack(side="left", padx=10)
-ttk.Button(frame_btn, text="⏹ Stop", command=stop_script).pack(side="left", padx=10)
-ttk.Button(frame_btn, text="⏭ Skip", command=skip_current).pack(side="left", padx=10)
+scheduler_buttons = ttk.Frame(scheduler_frame, style="Card.TFrame")
+scheduler_buttons.pack(anchor="w", pady=(4, 0))
+ttk.Button(scheduler_buttons, text="▶ Start Scheduler", command=start_scheduler).pack(side="left", padx=4)
+ttk.Button(scheduler_buttons, text="⏹ Stop Scheduler", command=stop_scheduler).pack(side="left", padx=4)
 
 # ========== KANAN ==========
-frame_right = ttk.Frame(paned, padding=10)
-paned.add(frame_right, weight=2)
+right_column = ttk.Frame(content, style="Main.TFrame")
+right_column.grid(row=0, column=1, sticky="nsew")
+right_column.rowconfigure(1, weight=1)
 
-# Frame Profile Range
-frame_range = ttk.LabelFrame(frame_right, text="Range Profile", padding=10)
-frame_range.pack(fill="x", pady=5)
+profiles_panel = ttk.LabelFrame(right_column, text="Profil & Skip List", padding=12, style="Card.TLabelframe")
+profiles_panel.grid(row=0, column=0, sticky="nsew")
 
-ttk.Label(frame_range, text="Start:").pack(side="left", padx=5)
-start_entry = ttk.Entry(frame_range, width=5)
+frame_range = ttk.Frame(profiles_panel, style="Card.TFrame")
+frame_range.pack(fill="x", pady=(0, 10))
+
+ttk.Label(frame_range, text="Start:", background="#ffffff").pack(side="left", padx=5)
+start_entry = ttk.Entry(frame_range, width=6)
 start_entry.insert(0, str(startProfile))
 start_entry.pack(side="left")
 
-ttk.Label(frame_range, text="End:").pack(side="left", padx=5)
-end_entry = ttk.Entry(frame_range, width=5)
+ttk.Label(frame_range, text="End:", background="#ffffff").pack(side="left", padx=5)
+end_entry = ttk.Entry(frame_range, width=6)
 end_entry.insert(0, str(endProfile))
 end_entry.pack(side="left")
 
 ttk.Button(frame_range, text="Update", command=update_profiles).pack(side="left", padx=10)
+ttk.Label(
+    profiles_panel,
+    text="Centang profil yang ingin dilewati ketika script berjalan.",
+    background="#ffffff"
+).pack(anchor="w", pady=(0, 6))
 
-# Frame Skip Profiles (checkbox manual)
-frame_skip = ttk.LabelFrame(frame_right, text="Skip Profiles (Checkbox)", padding=5)
-frame_skip.pack(fill="both", expand=True, pady=5)
+frame_skip = ttk.Frame(profiles_panel, style="Card.TFrame")
+frame_skip.pack(fill="both", expand=True)
 
-canvas = tk.Canvas(frame_skip, bg="#ffffff", highlightthickness=0)
+canvas = tk.Canvas(frame_skip, bg="#fdfdfd", highlightthickness=0)
 scrollbar = ttk.Scrollbar(frame_skip, orient="vertical", command=canvas.yview, style="Vertical.TScrollbar")
-
-scrollable_frame = ttk.Frame(canvas)
+scrollable_frame = ttk.Frame(canvas, padding=6)
 
 def resize_canvas(event):
     canvas.itemconfig(frame_window, width=event.width)
@@ -539,16 +571,10 @@ scrollable_frame.bind(
 
 frame_window = canvas.create_window((0, 0), window=scrollable_frame, anchor="nw")
 canvas.bind("<Configure>", resize_canvas)
-
 canvas.configure(yscrollcommand=scrollbar.set)
 
 canvas.pack(side="left", fill="both", expand=True)
 scrollbar.pack(side="right", fill="y")
-
-# Progress bar
-progress_var = tk.IntVar()
-progress = ttk.Progressbar(frame_right, variable=progress_var, maximum=100)
-progress.pack(fill="x", pady=15)
 
 update_profiles()
 root.mainloop()
