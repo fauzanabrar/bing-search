@@ -24,7 +24,7 @@ BROWSERS = {
         "label": "Microsoft Edge",
         "default_path": r"C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe" if system_name == "Windows" else "/usr/bin/microsoft-edge",
         "process_names": ["msedge.exe", "msedge"],
-        "profile_args": lambda profile: [f"--profile-directory=Profile {profile}"],
+        "profile_args": lambda profile_name: [f"--profile-directory={profile_name}"],
         "user_agent_flag": "--user-agent={user_agent}",
         "supports_user_agent": True,
     },
@@ -32,7 +32,7 @@ BROWSERS = {
         "label": "Google Chrome",
         "default_path": r"C:\Program Files\Google\Chrome\Application\chrome.exe" if system_name == "Windows" else "/usr/bin/google-chrome",
         "process_names": ["chrome.exe", "chrome"],
-        "profile_args": lambda profile: [f"--profile-directory=Profile {profile}"],
+        "profile_args": lambda profile_name: [f"--profile-directory={profile_name}"],
         "user_agent_flag": "--user-agent={user_agent}",
         "supports_user_agent": True,
     },
@@ -40,7 +40,7 @@ BROWSERS = {
         "label": "Mozilla Firefox",
         "default_path": r"C:\Program Files\Mozilla Firefox\firefox.exe" if system_name == "Windows" else "/usr/bin/firefox",
         "process_names": ["firefox.exe", "firefox"],
-        "profile_args": lambda profile: ["-P", f"Profile {profile}", "-no-remote"],
+        "profile_args": lambda profile_name: ["-P", profile_name, "-no-remote"],
         "user_agent_flag": None,
         "supports_user_agent": False,
     },
@@ -50,6 +50,12 @@ BROWSER_LABEL_TO_KEY = {data["label"]: key for key, data in BROWSERS.items()}
 DEFAULT_BROWSER_KEY = "edge"
 DEFAULT_BROWSER_LABEL = BROWSERS[DEFAULT_BROWSER_KEY]["label"]
 custom_browser_paths = {key: data["default_path"] for key, data in BROWSERS.items()}
+
+PROFILE_PATTERN_DEFAULTS = {
+    "desktop": "Profile {n}",
+    "mobile": "Profile {n}"
+}
+profile_patterns = PROFILE_PATTERN_DEFAULTS.copy()
 
 # ==== DAFTAR QUERY ====
 queries = [
@@ -113,12 +119,32 @@ def resolve_browser_settings():
     return browser_key, path_value
 
 
-def build_browser_command(browser_key, browser_path, profile_num, user_agent, url):
+def update_profile_pattern(kind, new_value):
+    default_value = PROFILE_PATTERN_DEFAULTS.get(kind, "Profile {n}")
+    value = (new_value or "").strip()
+    if not value:
+        value = default_value
+    if "{n}" not in value:
+        value = f"{value} {{n}}"
+    profile_patterns[kind] = value
+    return value
+
+
+def get_profile_pattern(kind):
+    return profile_patterns.get(kind, PROFILE_PATTERN_DEFAULTS.get(kind, "Profile {n}"))
+
+
+def format_profile_name(profile_num, profile_type):
+    pattern = get_profile_pattern(profile_type)
+    return pattern.replace("{n}", str(profile_num))
+
+
+def build_browser_command(browser_key, browser_path, profile_name, user_agent, url):
     config = BROWSERS.get(browser_key, BROWSERS[DEFAULT_BROWSER_KEY])
     cmd = [browser_path]
     profile_builder = config.get("profile_args")
     if profile_builder:
-        cmd.extend(profile_builder(profile_num))
+        cmd.extend(profile_builder(profile_name))
 
     ua_flag = config.get("user_agent_flag")
     if ua_flag:
@@ -188,8 +214,17 @@ def persist_browser_path(event=None):
     if "browser_path_var" in globals():
         remember_browser_path(get_selected_browser_key(), (browser_path_var.get() or "").strip())
 
+
+def persist_profile_pattern(kind, event=None):
+    if kind == "desktop" and "desktop_profile_pattern_var" in globals():
+        new_value = update_profile_pattern("desktop", desktop_profile_pattern_var.get())
+        desktop_profile_pattern_var.set(new_value)
+    elif kind == "mobile" and "mobile_profile_pattern_var" in globals():
+        new_value = update_profile_pattern("mobile", mobile_profile_pattern_var.get())
+        mobile_profile_pattern_var.set(new_value)
+
 # ==== Jalankan query ====
-def run_queries(user_agent, skipProfiles, waitSeconds, progress_var, progress_offset=0, progress_max=100, show_message=True, on_complete=None, stop_event=None, browser_key=DEFAULT_BROWSER_KEY, browser_path=None):
+def run_queries(user_agent, skipProfiles, waitSeconds, progress_var, progress_offset=0, progress_max=100, show_message=True, on_complete=None, stop_event=None, browser_key=DEFAULT_BROWSER_KEY, browser_path=None, profile_mode="desktop"):
     global stop_flag, skip_current_flag
     total_profiles = endProfile - startProfile + 1
     query_count = len(queries)
@@ -207,8 +242,9 @@ def run_queries(user_agent, skipProfiles, waitSeconds, progress_var, progress_of
 
         query = queries[(profileNum - startProfile) % query_count]
         url = searchEngine + query.replace(" ", "+")
+        profile_name = format_profile_name(profileNum, profile_mode)
 
-        cmd = build_browser_command(browser_key, executable_path, profileNum, user_agent, url)
+        cmd = build_browser_command(browser_key, executable_path, profile_name, user_agent, url)
         try:
             subprocess.Popen(cmd)
         except FileNotFoundError:
@@ -241,6 +277,9 @@ def start_script():
         messagebox.showerror("Error", "Pilih mode Mobile, Desktop, atau Desktop + Mobile!")
         return
 
+    persist_profile_pattern("desktop")
+    persist_profile_pattern("mobile")
+
     try:
         browser_key, browser_path = resolve_browser_settings()
     except FileNotFoundError as e:
@@ -265,8 +304,6 @@ def start_script():
     except ValueError:
         custom_wait = None
 
-    run_kwargs = {"browser_key": browser_key, "browser_path": browser_path}
-
     if choice == "desktop+mobile":
         def start_mobile():
             if not stop_flag:
@@ -275,7 +312,7 @@ def start_script():
                 t2 = threading.Thread(
                     target=run_queries,
                     args=(ua_mobile, skipProfiles, wait_mobile, progress_var, 50, 50, True),
-                    kwargs=run_kwargs.copy()
+                    kwargs={"browser_key": browser_key, "browser_path": browser_path, "profile_mode": "mobile"}
                 )
                 t2.start()
 
@@ -284,7 +321,7 @@ def start_script():
         t1 = threading.Thread(
             target=run_queries,
             args=(ua_desktop, skipProfiles, wait_desktop, progress_var, 0, 50, False, start_mobile),
-            kwargs=run_kwargs.copy()
+            kwargs={"browser_key": browser_key, "browser_path": browser_path, "profile_mode": "desktop"}
         )
         t1.start()
     else:
@@ -293,7 +330,7 @@ def start_script():
         t = threading.Thread(
             target=run_queries,
             args=(ua, skipProfiles, waitSeconds, progress_var),
-            kwargs=run_kwargs.copy()
+            kwargs={"browser_key": browser_key, "browser_path": browser_path, "profile_mode": "mobile" if choice == "mobile" else "desktop"}
         )
         t.start()
 
@@ -353,17 +390,30 @@ def scheduler_task(interval_minutes, browser_key, browser_path):
             except ValueError:
                 custom_wait = None
 
+            desktop_kwargs = {
+                "browser_key": browser_key,
+                "browser_path": browser_path,
+                "stop_event": scheduler_stop_event,
+                "profile_mode": "desktop"
+            }
+            mobile_kwargs = {
+                "browser_key": browser_key,
+                "browser_path": browser_path,
+                "stop_event": scheduler_stop_event,
+                "profile_mode": "mobile"
+            }
+
             if choice == "desktop+mobile":
                 def start_mobile():
                     if not scheduler_stop_event.is_set():
                         wait_mobile = custom_wait if custom_wait is not None else 800
-                        run_queries(ua_mobile, skipProfiles, wait_mobile, progress_var, 50, 50, False, stop_event=scheduler_stop_event, browser_key=browser_key, browser_path=browser_path)
+                        run_queries(ua_mobile, skipProfiles, wait_mobile, progress_var, 50, 50, False, stop_event=scheduler_stop_event, **mobile_kwargs)
                 wait_desktop = custom_wait if custom_wait is not None else 1100
-                run_queries(ua_desktop, skipProfiles, wait_desktop, progress_var, 0, 50, False, start_mobile, stop_event=scheduler_stop_event, browser_key=browser_key, browser_path=browser_path)
+                run_queries(ua_desktop, skipProfiles, wait_desktop, progress_var, 0, 50, False, start_mobile, stop_event=scheduler_stop_event, **desktop_kwargs)
             else:
                 ua = ua_mobile if choice == "mobile" else ua_desktop
                 waitSeconds = custom_wait if custom_wait is not None else (800 if choice == "mobile" else 1100)
-                run_queries(ua, skipProfiles, waitSeconds, progress_var, show_message=False, stop_event=scheduler_stop_event, browser_key=browser_key, browser_path=browser_path)
+                run_queries(ua, skipProfiles, waitSeconds, progress_var, show_message=False, stop_event=scheduler_stop_event, **(mobile_kwargs if choice == "mobile" else desktop_kwargs))
 
         # Wait for the interval or stop event
         if scheduler_stop_event.wait(interval_minutes * 60):
@@ -382,6 +432,10 @@ def start_scheduler():
     except ValueError:
         messagebox.showerror("Error", "Please enter a valid positive integer for interval")
         return
+
+    persist_profile_pattern("desktop")
+    persist_profile_pattern("mobile")
+
     try:
         browser_key, browser_path = resolve_browser_settings()
     except FileNotFoundError as e:
@@ -484,6 +538,28 @@ browser_path_entry = ttk.Entry(browser_container, textvariable=browser_path_var)
 browser_path_entry.pack(fill="x", pady=4)
 browser_path_entry.bind("<FocusOut>", persist_browser_path)
 browser_path_entry.bind("<Return>", persist_browser_path)
+
+profile_naming = ttk.LabelFrame(left_column, text="Penamaan Profil", padding=12, style="Card.TLabelframe")
+profile_naming.pack(fill="x", pady=(0, 12))
+profile_naming.columnconfigure(0, weight=1)
+profile_naming.columnconfigure(1, weight=1)
+
+desktop_profile_pattern_var = tk.StringVar(value=profile_patterns["desktop"])
+mobile_profile_pattern_var = tk.StringVar(value=profile_patterns["mobile"])
+
+ttk.Label(profile_naming, text="Gunakan {n} sebagai placeholder nomor profil.", background="#ffffff").grid(row=0, column=0, columnspan=2, sticky="w", pady=(0, 6))
+
+ttk.Label(profile_naming, text="Desktop:", background="#ffffff").grid(row=1, column=0, sticky="w")
+desktop_profile_entry = ttk.Entry(profile_naming, textvariable=desktop_profile_pattern_var)
+desktop_profile_entry.grid(row=2, column=0, sticky="ew", padx=(0, 8), pady=(2, 6))
+desktop_profile_entry.bind("<FocusOut>", lambda e: persist_profile_pattern("desktop", e))
+desktop_profile_entry.bind("<Return>", lambda e: persist_profile_pattern("desktop", e))
+
+ttk.Label(profile_naming, text="Mobile:", background="#ffffff").grid(row=1, column=1, sticky="w")
+mobile_profile_entry = ttk.Entry(profile_naming, textvariable=mobile_profile_pattern_var)
+mobile_profile_entry.grid(row=2, column=1, sticky="ew", padx=(8, 0), pady=(2, 6))
+mobile_profile_entry.bind("<FocusOut>", lambda e: persist_profile_pattern("mobile", e))
+mobile_profile_entry.bind("<Return>", lambda e: persist_profile_pattern("mobile", e))
 
 timing_controls = ttk.LabelFrame(left_column, text="Timing & Kontrol", padding=12, style="Card.TLabelframe")
 timing_controls.pack(fill="x", pady=(0, 12))

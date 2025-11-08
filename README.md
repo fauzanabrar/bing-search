@@ -112,6 +112,7 @@ Features:
 
 - Choose **Edge**, **Chrome**, or **Firefox**, and override the executable path if it lives somewhere else. Paths are remembered per browser so you can switch back and forth quickly (Firefox will always use its built-in user agent).
 - Choose **Mobile**, **Desktop**, or **Desktop + Mobile** user-agents (Edge is launched with `--user-agent`).
+- Desktop/mobile profile names are configurable via templates (`Profile {n}`, `Profile{n}_mobile`, etc.), which is handy for Firefox setups that rely on separate user agents per profile.
 - Specify **Start/End profile numbers** (`Profile 1` … `Profile N`), regenerate checkbox list, and skip specific profiles.
 - **Wait time** field (seconds) overrides default dwell durations (1100 seconds desktop, 800 seconds mobile).
 - Toolbar buttons:
@@ -125,7 +126,7 @@ Features:
 
 Customizing:
 
-- Update the `queries` list, `startProfile/endProfile`, or `searchEngine` constants in the script to match your workflow. Executable paths can be changed directly from the GUI (and are remembered per browser).
+- Update the `queries` list, `startProfile/endProfile`, or `searchEngine` constants in the script to match your workflow. Executable paths and profile-naming templates can be changed directly from the GUI (and are remembered per browser/mode). Use `{n}` as the placeholder for the running profile index.
 - The GUI uses standard Tkinter themes; feel free to adjust fonts or colors for your display.
 
 ---
