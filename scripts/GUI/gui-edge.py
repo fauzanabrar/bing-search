@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 
 # ==== SETTINGAN PROFILE ====
 startProfile = 1
-endProfile = 20
+endProfile = 6
 searchEngine = "https://www.google.com/search?q="
 edgePath = r"C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe" if platform.system() == "Windows" else "/usr/bin/microsoft-edge"
 

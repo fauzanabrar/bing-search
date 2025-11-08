@@ -3,7 +3,7 @@ from flask_cors import CORS
 from flask_sqlalchemy import SQLAlchemy
 from dotenv import load_dotenv
 from contextlib import contextmanager
-from threading import RLock
+from threading import RLock, local
 import random
 import subprocess
 import requests
@@ -90,9 +90,9 @@ def process_batch(batch):
         if keyword_text not in existing_keywords:
             new_records.append(Keyword(keyword=keyword_text))
 
-    # Bulk insert new keywords
+    # Insert new keywords letting PostgreSQL auto-generate IDs
     if new_records:
-        db.session.bulk_save_objects(new_records)
+        db.session.add_all(new_records)
         db.session.commit()
 
     return len([k for k in batch if k not in existing_keywords]), len([k for k in batch if k in existing_keywords])
