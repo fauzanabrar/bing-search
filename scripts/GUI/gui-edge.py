@@ -36,6 +36,22 @@ BROWSERS = {
         "user_agent_flag": "--user-agent={user_agent}",
         "supports_user_agent": True,
     },
+    "thorium": {
+        "label": "Thorium Browser",
+        "default_path": r"C:\Program Files\Thorium\Application\thorium.exe" if system_name == "Windows" else "/usr/bin/thorium-browser",
+        "process_names": ["thorium.exe", "thorium-browser", "thorium"],
+        "profile_args": lambda profile_name: [f"--profile-directory={profile_name}"],
+        "user_agent_flag": "--user-agent={user_agent}",
+        "supports_user_agent": True,
+    },
+    "mercury": {
+        "label": "Mercury Browser",
+        "default_path": r"C:\Program Files\Mercury\Mercury.exe" if system_name == "Windows" else "/usr/bin/mercury-browser",
+        "process_names": ["mercury.exe", "mercury-browser", "mercury"],
+        "profile_args": lambda profile_name: [f"--profile-directory={profile_name}"],
+        "user_agent_flag": None,
+        "supports_user_agent": False,
+    },
     "firefox": {
         "label": "Mozilla Firefox",
         "default_path": r"C:\Program Files\Mozilla Firefox\firefox.exe" if system_name == "Windows" else "/usr/bin/firefox",
@@ -60,7 +76,7 @@ profile_patterns = PROFILE_PATTERN_DEFAULTS.copy()
 # ==== DAFTAR QUERY ====
 queries = [
     "cara membuat pancake",
-    "destinasi wisata terbaik 2024",
+    "destinasi wisata terbaik 2025",
     "rutinitas olahraga di rumah yang mudah",
     "ulasan smartphone terbaru",
     "cara menabung dengan cepat",
@@ -77,7 +93,7 @@ queries = [
     "ide bisnis rumahan",
     "tips diet sehat",
     "cara merawat kulit wajah",
-    "teknologi terbaru di tahun 2024",
+    "teknologi terbaru di tahun 2025",
     "tren fashion terkini",
     "cara membuat website gratis",
     "aplikasi edit foto terbaik",
@@ -290,10 +306,11 @@ def start_script():
         return
 
     active_browser_key = browser_key
+    browser_label = BROWSERS[browser_key]["label"]
     if not BROWSERS[browser_key]["supports_user_agent"]:
         messagebox.showinfo(
             "User-Agent default",
-            "Mozilla Firefox tidak mendukung override user-agent melalui script ini.\n"
+            f"{browser_label} tidak mendukung override user-agent melalui script ini.\n"
             "Mode Mobile atau Desktop akan menggunakan user-agent bawaan.",
         )
 
