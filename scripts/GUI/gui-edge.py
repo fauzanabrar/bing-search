@@ -7,6 +7,8 @@ import psutil
 import os
 import time
 import logging
+import configparser
+import re
 
 # ==== SETUP LOGGER ====
 logging.basicConfig(level=logging.INFO)
@@ -20,11 +22,19 @@ searchEngine = "https://www.google.com/search?q="
 system_name = platform.system()
 
 BROWSERS = {
+    "mercury": {
+        "label": "Mercury Browser",
+        "default_path": r"C:\Program Files\Mercury\Mercury.exe" if system_name == "Windows" else "/usr/bin/mercury-browser",
+        "process_names": ["mercury.exe", "mercury-browser", "mercury"],
+        "profile_args": lambda profile_name: ["-P", profile_name, "-no-remote"],
+        "user_agent_flag": None,
+        "supports_user_agent": False,
+    },
     "edge": {
         "label": "Microsoft Edge",
         "default_path": r"C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe" if system_name == "Windows" else "/usr/bin/microsoft-edge",
         "process_names": ["msedge.exe", "msedge"],
-        "profile_args": lambda profile_name: [f"--profile-directory={profile_name}"],
+        "profile_args": lambda profile_name: [f,profile_name],
         "user_agent_flag": "--user-agent={user_agent}",
         "supports_user_agent": True,
     },
@@ -43,14 +53,6 @@ BROWSERS = {
         "profile_args": lambda profile_name: [f"--profile-directory={profile_name}"],
         "user_agent_flag": "--user-agent={user_agent}",
         "supports_user_agent": True,
-    },
-    "mercury": {
-        "label": "Mercury Browser",
-        "default_path": r"C:\Program Files\Mercury\Mercury.exe" if system_name == "Windows" else "/usr/bin/mercury-browser",
-        "process_names": ["mercury.exe", "mercury-browser", "mercury"],
-        "profile_args": lambda profile_name: [f"--profile-directory={profile_name}"],
-        "user_agent_flag": None,
-        "supports_user_agent": False,
     },
     "firefox": {
         "label": "Mozilla Firefox",
@@ -105,7 +107,7 @@ queries = [
 
 # ==== USER AGENT ====
 ua_desktop = "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/117.0.0.0 Safari/537.36"
-ua_mobile = "Mozilla/5.0 (iPhone; CPU iPhone OS 15_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/15.0 Mobile/15E148 Safari/604.1"
+ua_mobile = "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1"
 
 stop_flag = False
 skip_current_flag = False
@@ -153,6 +155,149 @@ def get_profile_pattern(kind):
 def format_profile_name(profile_num, profile_type):
     pattern = get_profile_pattern(profile_type)
     return pattern.replace("{n}", str(profile_num))
+
+
+def get_profile_base_dir(browser_key):
+    """Return the profile base directory for Firefox/Mercury."""
+    appdata = os.getenv("APPDATA", "")
+    home = os.path.expanduser("~")
+    if browser_key == "firefox":
+        if system_name == "Windows":
+            return os.path.join(appdata, "Mozilla", "Firefox", "Profiles")
+        if system_name == "Darwin":
+            return os.path.join(home, "Library", "Application Support", "Firefox", "Profiles")
+        return os.path.join(home, ".mozilla", "firefox")
+    if browser_key == "mercury":
+        if system_name == "Windows":
+            return os.path.join(appdata, "Mercury", "Profiles")
+        if system_name == "Darwin":
+            return os.path.join(home, "Library", "Application Support", "Mercury", "Profiles")
+        return os.path.join(home, ".mercury")
+    return None
+
+
+def extract_profile_index(profile_name):
+    """Return numeric index from a profile name like 'Profile 2', else None."""
+    match = re.search(r"(\d+)", profile_name)
+    return int(match.group(1)) if match else None
+
+
+def resolve_profile_dir_from_ini(base_dir, profile_name):
+    """Use profiles.ini to map a profile Name to its Path."""
+    ini_candidates = [
+        os.path.join(base_dir, "profiles.ini"),
+        os.path.join(os.path.dirname(base_dir), "profiles.ini"),
+    ]
+
+    parser = configparser.ConfigParser(interpolation=None)
+    ini_path = None
+    for candidate in ini_candidates:
+        if os.path.exists(candidate):
+            ini_path = candidate
+            break
+    if not ini_path:
+        return None
+
+    try:
+        parser.read(ini_path, encoding="utf-8")
+    except OSError as exc:
+        logger.error("Gagal membaca %s: %s", ini_path, exc)
+        return None
+
+    base_for_paths = os.path.dirname(ini_path)
+    target = profile_name.lower()
+
+    def _matches(name_val, path_val):
+        name_lower = (name_val or "").lower()
+        path_lower = (path_val or "").lower()
+        if name_lower == target:
+            return True
+        if target and target in path_lower:
+            return True
+        return False
+
+    idx_target = extract_profile_index(profile_name)
+    resolved_paths = []
+
+    for i, section in enumerate(parser.sections(), 1):
+        name_val = parser[section].get("Name")
+        path_val = parser[section].get("Path")
+        if not path_val:
+            continue
+        is_relative = parser[section].get("IsRelative", "1").strip() != "0"
+        resolved = os.path.normpath(os.path.join(base_for_paths, path_val) if is_relative else path_val)
+        if _matches(name_val, path_val):
+            return resolved
+        resolved_paths.append(resolved)
+
+    # Fallback: pick profile by numeric order if profile name embeds a number (Profile 1 -> first in list, etc.)
+    if idx_target and 1 <= idx_target <= len(resolved_paths):
+        return resolved_paths[idx_target - 1]
+    return None
+
+
+def find_profile_dir_by_name(base_dir, profile_name):
+    """Best-effort match of folder name to profile name suffix."""
+    target = profile_name.lower()
+    try:
+        entries = sorted(os.listdir(base_dir))
+    except OSError as exc:
+        logger.error("Gagal membaca direktori profil %s: %s", base_dir, exc)
+        return None
+
+    for entry in entries:
+        candidate_dir = os.path.join(base_dir, entry)
+        if not os.path.isdir(candidate_dir):
+            continue
+        entry_lower = entry.lower()
+        if entry_lower == target or entry_lower.endswith(target) or target in entry_lower:
+            return candidate_dir
+    return None
+
+
+def update_user_js_override(browser_key, profile_name, user_agent):
+    """Ensure general.useragent.override is set for Mercury and Firefox profiles by editing user.js."""
+    if browser_key not in ("firefox", "mercury"):
+        return
+
+    base_dir = get_profile_base_dir(browser_key)
+    if not base_dir:
+        logger.debug("Profile base dir not found for %s", browser_key)
+        return
+
+    profile_dir = resolve_profile_dir_from_ini(base_dir, profile_name) or find_profile_dir_by_name(base_dir, profile_name)
+    if not profile_dir or not os.path.isdir(profile_dir):
+        logger.warning("Profile directory %s not found for %s; skip user.js update", profile_dir or "(unknown)", browser_key)
+        return
+
+    user_js_path = os.path.join(profile_dir, "user.js")
+    try:
+        existing_lines = []
+        if os.path.exists(user_js_path):
+            with open(user_js_path, "r", encoding="utf-8") as f:
+                existing_lines = f.readlines()
+    except OSError as exc:
+        logger.error("Gagal membaca %s: %s", user_js_path, exc)
+        return
+
+    filtered = []
+    for line in existing_lines:
+        stripped = line.strip()
+        if stripped.startswith("// Auto-set User Agent"):
+            continue
+        if "general.useragent.override" in stripped:
+            continue
+        filtered.append(line)
+
+    new_lines = filtered
+    override_line = f'user_pref("general.useragent.override", "{user_agent}");\n'
+    new_lines += ["// Auto-set User Agent on startup\n", override_line]
+
+    try:
+        with open(user_js_path, "w", encoding="utf-8") as f:
+            f.writelines(new_lines)
+    except OSError as exc:
+        logger.error("Gagal menulis %s: %s", user_js_path, exc)
 
 
 def build_browser_command(browser_key, browser_path, profile_name, user_agent, url):
@@ -260,6 +405,11 @@ def run_queries(user_agent, skipProfiles, waitSeconds, progress_var, progress_of
         url = searchEngine + query.replace(" ", "+")
         profile_name = format_profile_name(profileNum, profile_mode)
 
+        try:
+            update_user_js_override(browser_key, profile_name, user_agent)
+        except Exception as exc:  # safeguard so UA write issues don't stop the run
+            logger.error("Gagal mengatur user.js untuk %s profil %s: %s", browser_key, profile_name, exc)
+
         cmd = build_browser_command(browser_key, executable_path, profile_name, user_agent, url)
         try:
             subprocess.Popen(cmd)
@@ -308,11 +458,17 @@ def start_script():
     active_browser_key = browser_key
     browser_label = BROWSERS[browser_key]["label"]
     if not BROWSERS[browser_key]["supports_user_agent"]:
-        messagebox.showinfo(
-            "User-Agent default",
-            f"{browser_label} tidak mendukung override user-agent melalui script ini.\n"
-            "Mode Mobile atau Desktop akan menggunakan user-agent bawaan.",
-        )
+        if browser_key in ("firefox", "mercury"):
+            messagebox.showinfo(
+                "User-Agent via user.js",
+                f"{browser_label} tidak mendukung flag user-agent, tetapi user.js akan diupdate otomatis untuk mode Desktop/Mobile.",
+            )
+        else:
+            messagebox.showinfo(
+                "User-Agent default",
+                f"{browser_label} tidak mendukung override user-agent melalui script ini.\n"
+                "Mode Mobile atau Desktop akan menggunakan user-agent bawaan.",
+            )
 
     skipProfiles = [i for i, var in skip_vars.items() if var.get() == 1]
 
@@ -386,6 +542,11 @@ def update_profiles():
         chk = ttk.Checkbutton(scrollable_frame, text=f"Profile {i}", variable=var)
         chk.pack(anchor="w", padx=5, pady=2)
         skip_vars[i] = var
+
+
+def set_all_skip(value):
+    for var in skip_vars.values():
+        var.set(1 if value else 0)
 
 
 # ==== SCHEDULER IMPLEMENTATION ====
@@ -482,8 +643,8 @@ def stop_scheduler():
 # ==== GUI ====
 root = tk.Tk()
 root.title("🌐 Browser Query Runner")
-root.geometry("960x640")
-root.minsize(900, 700)
+root.geometry("960x900")
+root.minsize(900, 820)
 root.configure(bg="#f6f8fb")
 
 style = ttk.Style(root)
@@ -510,6 +671,7 @@ ttk.Label(
 
 content = ttk.Frame(root, padding=(16, 0, 16, 16), style="Main.TFrame")
 content.pack(fill="both", expand=True)
+content.rowconfigure(0, weight=1)
 content.columnconfigure(0, weight=1)
 content.columnconfigure(1, weight=1)
 
@@ -616,8 +778,8 @@ scheduler_status_label.pack(anchor="w", pady=4)
 
 scheduler_buttons = ttk.Frame(scheduler_frame, style="Card.TFrame")
 scheduler_buttons.pack(anchor="w", pady=(4, 0))
-ttk.Button(scheduler_buttons, text="▶ Start Scheduler", command=start_scheduler).pack(side="left", padx=4)
-ttk.Button(scheduler_buttons, text="⏹ Stop Scheduler", command=stop_scheduler).pack(side="left", padx=4)
+ttk.Button(scheduler_buttons, text="Start Scheduler", command=start_scheduler).pack(side="left", padx=4)
+ttk.Button(scheduler_buttons, text="Stop Scheduler", command=stop_scheduler).pack(side="left", padx=4)
 
 # ========== KANAN ==========
 right_column = ttk.Frame(content, style="Main.TFrame")
@@ -647,6 +809,11 @@ ttk.Label(
     background="#ffffff"
 ).pack(anchor="w", pady=(0, 6))
 
+skip_actions = ttk.Frame(profiles_panel, style="Card.TFrame")
+skip_actions.pack(fill="x", pady=(0, 8))
+ttk.Button(skip_actions, text="Check all", command=lambda: set_all_skip(True)).pack(side="left", padx=4)
+ttk.Button(skip_actions, text="Uncheck all", command=lambda: set_all_skip(False)).pack(side="left", padx=4)
+
 frame_skip = ttk.Frame(profiles_panel, style="Card.TFrame")
 frame_skip.pack(fill="both", expand=True)
 
@@ -668,9 +835,14 @@ canvas.configure(yscrollcommand=scrollbar.set)
 
 def bind_scroll(widget, target_canvas):
     def _on_mousewheel(event):
+        target = widget.winfo_containing(event.x_root, event.y_root)
+        if not target:
+            return
+        if not str(target).startswith(str(widget)):
+            return
         target_canvas.yview_scroll(int(-1 * (event.delta / 120)), "units")
         return "break"
-    widget.bind_all("<MouseWheel>", _on_mousewheel)
+    widget.bind_all("<MouseWheel>", _on_mousewheel, add="+")
 
 bind_scroll(scrollable_frame, canvas)
 
