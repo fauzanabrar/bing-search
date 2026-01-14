@@ -2,6 +2,8 @@ import tkinter as tk
 from tkinter import ttk, messagebox
 import threading
 import subprocess
+import webbrowser
+import ctypes
 import platform
 import psutil
 import os
@@ -9,6 +11,13 @@ import time
 import logging
 import configparser
 import re
+
+try:
+    from tkinterweb import HtmlFrame
+    HAS_TKINTERWEB = True
+except ImportError:
+    HtmlFrame = None
+    HAS_TKINTERWEB = False
 
 # ==== SETUP LOGGER ====
 logging.basicConfig(level=logging.INFO)
@@ -114,6 +123,14 @@ skip_current_flag = False
 skip_vars = {}
 active_browser_key = DEFAULT_BROWSER_KEY
 current_browser_selection = {"key": DEFAULT_BROWSER_KEY}
+ads_frame = None
+ad_container = None
+ad_view = None
+ad_message_var = None
+ads_enabled_var = None
+ads_button_row = None
+ads_reload_button = None
+ui_scale = 1.0
 
 
 def remember_browser_path(browser_key, path_value):
@@ -384,6 +401,126 @@ def persist_profile_pattern(kind, event=None):
         new_value = update_profile_pattern("mobile", mobile_profile_pattern_var.get())
         mobile_profile_pattern_var.set(new_value)
 
+
+def ads_enabled():
+    return bool(ads_enabled_var and ads_enabled_var.get())
+
+
+def update_ads_visibility():
+    if ads_frame is None:
+        return
+    if ads_enabled():
+        ads_frame.grid()
+    else:
+        ads_frame.grid_remove()
+    refresh_ad()
+
+
+def load_ad_url(url):
+    if not ads_enabled():
+        if ad_message_var:
+            ad_message_var.set("Ads disabled. Enable in Settings.")
+        if HAS_TKINTERWEB and ad_view and hasattr(ad_view, "load_html"):
+            ad_view.load_html(
+                "<html><body style=\"font-family:Segoe UI, Arial;\">"
+                "<p>Ads are disabled. Enable them in Settings.</p>"
+                "</body></html>"
+            )
+        return
+    url_value = (url or "").strip()
+    if not url_value:
+        if ad_message_var:
+            ad_message_var.set("") # Clear message
+        if HAS_TKINTERWEB and ad_view and hasattr(ad_view, "load_html"):
+            ad_html = """
+        <html>
+            <body style="margin:0; padding:0;">
+                <script async="async" data-cfasync="false" src="https://pl28473440.effectivegatecpm.com/577b1eae4fcdd1412dd09d7cff191561/invoke.js"></script>
+                <div id="container-577b1eae4fcdd1412dd09d7cff191561"></div>
+                <script async="async" data-cfasync="false" src="https://pl28473440.effectivegatecpm.com/577b1eae4fcdd1412dd09d7cff191561/invoke.js"></script>
+                <div id="container-577b1eae4fcdd1412dd09d7cff191561"></div>
+                <script async="async" data-cfasync="false" src="https://pl28473440.effectivegatecpm.com/577b1eae4fcdd1412dd09d7cff191561/invoke.js"></script>
+                <div id="container-577b1eae4fcdd1412dd09d7cff191561"></div>
+            </body>
+        </html>
+        """
+            ad_view.load_html(ad_html)
+        else:
+            if ad_message_var:
+                ad_message_var.set("Install tkinterweb to show default ad.")
+        return
+    if HAS_TKINTERWEB and ad_view:
+        loader = getattr(ad_view, "load_website", None) or getattr(ad_view, "load_url", None)
+        if loader:
+            loader(url_value)
+            return
+        if hasattr(ad_view, "load_html"):
+            ad_view.load_html(
+                "<html><body style=\"font-family:Segoe UI, Arial;\">"
+                "<p>Web view loaded, but no URL loader available.</p>"
+                f"<p>Open in browser: <a href=\"{url_value}\">{url_value}</a></p>"
+                "</body></html>"
+            )
+            return
+    if ad_message_var:
+        ad_message_var.set("Install tkinterweb to show ads here.")
+
+
+def refresh_ad(event=None):
+    load_ad_url(None)
+
+
+
+
+def open_ad_fallback():
+    # Construct path to landing/index.html relative to this script
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    # Path is e:\code\bing-search\scripts\GUI -> need to go to e:\code\bing-search\landing
+    landing_page = os.path.join(script_dir, "..", "..", "landing", "index.html")
+    if os.path.exists(landing_page):
+        webbrowser.open(f"file://{os.path.abspath(landing_page)}")
+    else:
+        messagebox.showerror("Error", "Landing page not found at " + os.path.abspath(landing_page))
+
+def init_dpi_awareness():
+    if system_name != "Windows":
+        return
+    try:
+        ctypes.windll.shcore.SetProcessDpiAwareness(2)
+    except Exception:
+        try:
+            ctypes.windll.user32.SetProcessDPIAware()
+        except Exception:
+            return
+
+
+def get_ui_scale(window=None):
+    if system_name != "Windows":
+        return 1.0
+    try:
+        if window is not None:
+            dpi = ctypes.windll.user32.GetDpiForWindow(window.winfo_id())
+        else:
+            dpi = ctypes.windll.user32.GetDpiForSystem()
+        return max(dpi / 96.0, 1.0)
+    except Exception:
+        return 1.0
+
+
+def adjust_ads_button_row(event=None):
+    if ads_button_row is None:
+        return
+    ads_button_row.update_idletasks()
+    heights = [
+        widget.winfo_reqheight()
+        for widget in (ads_reload_button,)
+        if widget is not None
+    ]
+    if not heights:
+        return
+    min_height = max(heights) + int(4 * ui_scale)
+    ads_button_row.rowconfigure(0, minsize=min_height)
+
 # ==== Jalankan query ====
 def run_queries(user_agent, skipProfiles, waitSeconds, progress_var, progress_offset=0, progress_max=100, show_message=True, on_complete=None, stop_event=None, browser_key=DEFAULT_BROWSER_KEY, browser_path=None, profile_mode="desktop"):
     global stop_flag, skip_current_flag
@@ -641,7 +778,13 @@ def stop_scheduler():
     logger.info("Scheduler stopped")
 
 # ==== GUI ====
+init_dpi_awareness()
 root = tk.Tk()
+ui_scale = get_ui_scale(root)
+try:
+    root.tk.call("tk", "scaling", ui_scale)
+except tk.TclError:
+    pass
 root.title("🌐 Browser Query Runner")
 root.geometry("960x900")
 root.minsize(900, 820)
@@ -650,11 +793,22 @@ root.configure(bg="#f6f8fb")
 style = ttk.Style(root)
 style.theme_use("clam")
 style.configure("TButton", font=("Segoe UI", 11), padding=6)
+style.map("TButton", foreground=[("disabled", "#9aa3b2"), ("!disabled", "#1f2933")])
+style.configure("Ads.TButton", font=("Segoe UI", 10, "bold"), padding=(10, 6), foreground="#1f2933", background="#e7edf5")
+style.map(
+    "Ads.TButton",
+    foreground=[("disabled", "#9aa3b2"), ("!disabled", "#1f2933")],
+    background=[("pressed", "#d4dbe7"), ("active", "#dbe3ef"), ("!disabled", "#e7edf5")]
+)
 style.configure("TLabel", font=("Segoe UI", 10), background="#f6f8fb")
+style.configure("TCheckbutton", font=("Segoe UI", 10), background="#ffffff")
+style.map("TCheckbutton", foreground=[("disabled", "#9aa3b2"), ("!disabled", "#1f2933")])
 style.configure("Main.TFrame", background="#f6f8fb")
 style.configure("Card.TLabelframe", background="#ffffff", relief="ridge", borderwidth=1)
 style.configure("Card.TLabelframe.Label", background="#ffffff", font=("Segoe UI", 11, "bold"))
 style.configure("Card.TFrame", background="#ffffff")
+style.configure("TNotebook", background="#f6f8fb", borderwidth=0)
+style.configure("TNotebook.Tab", font=("Segoe UI", 10), padding=(10, 6))
 style.configure("Vertical.TScrollbar", gripcount=0,
                 background="#cfd8e3", troughcolor="#ecf0f7",
                 bordercolor="#ecf0f7", arrowcolor="#4b5874")
@@ -669,76 +823,36 @@ ttk.Label(
     background="#f6f8fb"
 ).pack(anchor="w", pady=(4, 0))
 
-content = ttk.Frame(root, padding=(16, 0, 16, 16), style="Main.TFrame")
-content.pack(fill="both", expand=True)
-content.rowconfigure(0, weight=1)
-content.columnconfigure(0, weight=1)
-content.columnconfigure(1, weight=1)
+notebook = ttk.Notebook(root)
+notebook.pack(fill="both", expand=True, padx=(16, 16), pady=(0, 16))
+
+main_tab = ttk.Frame(notebook, padding=(16, 0, 16, 16), style="Main.TFrame")
+settings_tab = ttk.Frame(notebook, padding=(16, 0, 16, 16), style="Main.TFrame")
+notebook.add(main_tab, text="Main")
+notebook.add(settings_tab, text="Settings")
+
+main_tab.rowconfigure(0, weight=0)
+main_tab.rowconfigure(1, weight=0)
+main_tab.columnconfigure(0, weight=1, uniform="main")
+main_tab.columnconfigure(1, weight=1, uniform="main")
+settings_tab.columnconfigure(0, weight=1)
 
 # ========== KIRI ==========
-left_column = ttk.Frame(content, style="Main.TFrame")
-left_column.grid(row=0, column=0, sticky="nsew", padx=(0, 12))
+left_column = ttk.Frame(main_tab, style="Main.TFrame")
+left_column.grid(row=0, column=0, sticky="nsew", padx=(0, 8))
 
-mode_browser = ttk.LabelFrame(left_column, text="Mode & Browser", padding=12, style="Card.TLabelframe")
+mode_browser = ttk.LabelFrame(left_column, text="Mode", padding=12, style="Card.TLabelframe")
 mode_browser.pack(fill="x", pady=(0, 12))
 mode_browser.columnconfigure(0, weight=1)
-mode_browser.columnconfigure(1, weight=1)
 
 mode_container = ttk.Frame(mode_browser, style="Card.TFrame")
-mode_container.grid(row=0, column=0, sticky="nsew", padx=(0, 8))
+mode_container.grid(row=0, column=0, sticky="nsew")
 
 mode_var = tk.StringVar(value="")
 ttk.Label(mode_container, text="Mode pencarian:", background="#ffffff").pack(anchor="w", pady=(0, 4))
 ttk.Radiobutton(mode_container, text="📱 Mobile", variable=mode_var, value="mobile").pack(anchor="w", pady=2)
 ttk.Radiobutton(mode_container, text="💻 Desktop", variable=mode_var, value="desktop").pack(anchor="w", pady=2)
 ttk.Radiobutton(mode_container, text="💻📱 Desktop + Mobile", variable=mode_var, value="desktop+mobile").pack(anchor="w", pady=2)
-
-browser_container = ttk.Frame(mode_browser, style="Card.TFrame")
-browser_container.grid(row=0, column=1, sticky="nsew", padx=(8, 0))
-
-browser_choice_var = tk.StringVar(value=DEFAULT_BROWSER_LABEL)
-browser_path_var = tk.StringVar(value=BROWSERS[DEFAULT_BROWSER_KEY]["default_path"])
-browser_labels = [data["label"] for data in BROWSERS.values()]
-
-ttk.Label(browser_container, text="Browser:", background="#ffffff").pack(anchor="w")
-browser_combo = ttk.Combobox(
-    browser_container,
-    textvariable=browser_choice_var,
-    state="readonly",
-    values=browser_labels
-)
-browser_combo.pack(fill="x", pady=4)
-if DEFAULT_BROWSER_LABEL in browser_labels:
-    browser_combo.current(browser_labels.index(DEFAULT_BROWSER_LABEL))
-browser_combo.bind("<<ComboboxSelected>>", on_browser_change)
-
-ttk.Label(browser_container, text="Path executable:", background="#ffffff").pack(anchor="w", pady=(6, 0))
-browser_path_entry = ttk.Entry(browser_container, textvariable=browser_path_var)
-browser_path_entry.pack(fill="x", pady=4)
-browser_path_entry.bind("<FocusOut>", persist_browser_path)
-browser_path_entry.bind("<Return>", persist_browser_path)
-
-profile_naming = ttk.LabelFrame(left_column, text="Penamaan Profil", padding=12, style="Card.TLabelframe")
-profile_naming.pack(fill="x", pady=(0, 12))
-profile_naming.columnconfigure(0, weight=1)
-profile_naming.columnconfigure(1, weight=1)
-
-desktop_profile_pattern_var = tk.StringVar(value=profile_patterns["desktop"])
-mobile_profile_pattern_var = tk.StringVar(value=profile_patterns["mobile"])
-
-ttk.Label(profile_naming, text="Gunakan {n} sebagai placeholder nomor profil.", background="#ffffff").grid(row=0, column=0, columnspan=2, sticky="w", pady=(0, 6))
-
-ttk.Label(profile_naming, text="Desktop:", background="#ffffff").grid(row=1, column=0, sticky="w")
-desktop_profile_entry = ttk.Entry(profile_naming, textvariable=desktop_profile_pattern_var)
-desktop_profile_entry.grid(row=2, column=0, sticky="ew", padx=(0, 8), pady=(2, 6))
-desktop_profile_entry.bind("<FocusOut>", lambda e: persist_profile_pattern("desktop", e))
-desktop_profile_entry.bind("<Return>", lambda e: persist_profile_pattern("desktop", e))
-
-ttk.Label(profile_naming, text="Mobile:", background="#ffffff").grid(row=1, column=1, sticky="w")
-mobile_profile_entry = ttk.Entry(profile_naming, textvariable=mobile_profile_pattern_var)
-mobile_profile_entry.grid(row=2, column=1, sticky="ew", padx=(8, 0), pady=(2, 6))
-mobile_profile_entry.bind("<FocusOut>", lambda e: persist_profile_pattern("mobile", e))
-mobile_profile_entry.bind("<Return>", lambda e: persist_profile_pattern("mobile", e))
 
 timing_controls = ttk.LabelFrame(left_column, text="Timing & Kontrol", padding=12, style="Card.TLabelframe")
 timing_controls.pack(fill="x", pady=(0, 12))
@@ -763,33 +877,17 @@ progress = ttk.Progressbar(timing_controls, variable=progress_var, maximum=100)
 progress.pack(fill="x")
 ttk.Label(timing_controls, text="Progress run tampil di sini.", background="#ffffff").pack(anchor="w", pady=(6, 0))
 
-# Scheduler
-scheduler_frame = ttk.LabelFrame(left_column, text="Scheduler", padding=12, style="Card.TLabelframe")
-scheduler_frame.pack(fill="x")
-
-ttk.Label(scheduler_frame, text="Interval (menit):", background="#ffffff").pack(anchor="w")
-scheduler_interval_entry = ttk.Entry(scheduler_frame)
-scheduler_interval_entry.pack(anchor="w", pady=4)
-scheduler_interval_entry.insert(0, "10")
-
-scheduler_status_var = tk.StringVar(value="Scheduler stopped")
-scheduler_status_label = ttk.Label(scheduler_frame, textvariable=scheduler_status_var, background="#ffffff")
-scheduler_status_label.pack(anchor="w", pady=4)
-
-scheduler_buttons = ttk.Frame(scheduler_frame, style="Card.TFrame")
-scheduler_buttons.pack(anchor="w", pady=(4, 0))
-ttk.Button(scheduler_buttons, text="Start Scheduler", command=start_scheduler).pack(side="left", padx=4)
-ttk.Button(scheduler_buttons, text="Stop Scheduler", command=stop_scheduler).pack(side="left", padx=4)
-
 # ========== KANAN ==========
-right_column = ttk.Frame(content, style="Main.TFrame")
-right_column.grid(row=0, column=1, sticky="nsew")
-right_column.rowconfigure(1, weight=1)
+right_column = ttk.Frame(main_tab, style="Main.TFrame")
+right_column.grid(row=0, column=1, sticky="nsew", padx=(8, 0))
+right_column.columnconfigure(0, weight=1)
+right_column.rowconfigure(1, weight=0)
 
-profiles_panel = ttk.LabelFrame(right_column, text="Profil & Skip List", padding=12, style="Card.TLabelframe")
-profiles_panel.grid(row=0, column=0, sticky="nsew")
+profile_controls_panel = ttk.LabelFrame(right_column, text="Profil Range", padding=12, style="Card.TLabelframe")
+profile_controls_panel.grid(row=0, column=0, sticky="ew", pady=(0, 12))
+profile_controls_panel.columnconfigure(0, weight=1)
 
-frame_range = ttk.Frame(profiles_panel, style="Card.TFrame")
+frame_range = ttk.Frame(profile_controls_panel, style="Card.TFrame")
 frame_range.pack(fill="x", pady=(0, 10))
 
 ttk.Label(frame_range, text="Start:", background="#ffffff").pack(side="left", padx=5)
@@ -804,6 +902,16 @@ end_entry.pack(side="left")
 
 ttk.Button(frame_range, text="Update", command=update_profiles).pack(side="left", padx=10)
 ttk.Label(
+    profile_controls_panel,
+    text="Klik Update untuk refresh daftar profil.",
+    background="#ffffff"
+).pack(anchor="w", pady=(0, 6))
+
+profiles_panel = ttk.LabelFrame(right_column, text="Skip List", padding=12, style="Card.TLabelframe")
+profiles_panel.grid(row=1, column=0, sticky="nsew")
+profiles_panel.columnconfigure(0, weight=1)
+
+ttk.Label(
     profiles_panel,
     text="Centang profil yang ingin dilewati ketika script berjalan.",
     background="#ffffff"
@@ -814,10 +922,11 @@ skip_actions.pack(fill="x", pady=(0, 8))
 ttk.Button(skip_actions, text="Check all", command=lambda: set_all_skip(True)).pack(side="left", padx=4)
 ttk.Button(skip_actions, text="Uncheck all", command=lambda: set_all_skip(False)).pack(side="left", padx=4)
 
-frame_skip = ttk.Frame(profiles_panel, style="Card.TFrame")
-frame_skip.pack(fill="both", expand=True)
+frame_skip = ttk.Frame(profiles_panel, style="Card.TFrame", height=260)
+frame_skip.pack(fill="x", expand=False)
+frame_skip.pack_propagate(False)
 
-canvas = tk.Canvas(frame_skip, bg="#fdfdfd", highlightthickness=0)
+canvas = tk.Canvas(frame_skip, bg="#fdfdfd", highlightthickness=0, height=240)
 scrollbar = ttk.Scrollbar(frame_skip, orient="vertical", command=canvas.yview, style="Vertical.TScrollbar")
 scrollable_frame = ttk.Frame(canvas, padding=6)
 
@@ -848,6 +957,135 @@ bind_scroll(scrollable_frame, canvas)
 
 canvas.pack(side="left", fill="both", expand=True)
 scrollbar.pack(side="right", fill="y")
+
+ads_frame = ttk.LabelFrame(main_tab, text="Ads", padding=12, style="Card.TLabelframe")
+ads_frame.grid(row=1, column=0, columnspan=2, sticky="ew", pady=(12, 0))
+ads_frame.columnconfigure(0, weight=1)
+
+ad_container = ttk.Frame(ads_frame, style="Card.TFrame", height=120)
+ad_container.grid(row=0, column=0, sticky="ew")
+ad_container.grid_propagate(False)
+
+if HAS_TKINTERWEB:
+    ad_view = HtmlFrame(ad_container)
+    ad_view.pack(fill="both", expand=True)
+else:
+    # Fallback if tkinterweb is not installed
+    fallback_frame = ttk.Frame(ad_container, style="Card.TFrame")
+    fallback_frame.pack(expand=True, fill="both")
+    
+    ttk.Label(
+        fallback_frame,
+        text="Ads cannot be shown in the app because the 'tkinterweb' library is missing.",
+        background="#ffffff",
+        wraplength=700,
+        justify="center"
+    ).pack(pady=(10, 5))
+
+    ttk.Button(
+        fallback_frame,
+        text="Show Ad in Browser",
+        command=open_ad_fallback
+    ).pack(pady=5)
+
+# ========== SETTINGS ==========
+browser_settings = ttk.LabelFrame(settings_tab, text="Browser Settings", padding=12, style="Card.TLabelframe")
+browser_settings.pack(fill="x", pady=(0, 12))
+browser_settings.columnconfigure(0, weight=1)
+
+browser_choice_var = tk.StringVar(value=DEFAULT_BROWSER_LABEL)
+browser_path_var = tk.StringVar(value=BROWSERS[DEFAULT_BROWSER_KEY]["default_path"])
+browser_labels = [data["label"] for data in BROWSERS.values()]
+
+ttk.Label(browser_settings, text="Browser:", background="#ffffff").pack(anchor="w")
+browser_combo = ttk.Combobox(
+    browser_settings,
+    textvariable=browser_choice_var,
+    state="readonly",
+    values=browser_labels
+)
+browser_combo.pack(fill="x", pady=4)
+if DEFAULT_BROWSER_LABEL in browser_labels:
+    browser_combo.current(browser_labels.index(DEFAULT_BROWSER_LABEL))
+browser_combo.bind("<<ComboboxSelected>>", on_browser_change)
+
+ttk.Label(browser_settings, text="Path executable:", background="#ffffff").pack(anchor="w", pady=(6, 0))
+browser_path_entry = ttk.Entry(browser_settings, textvariable=browser_path_var)
+browser_path_entry.pack(fill="x", pady=4)
+browser_path_entry.bind("<FocusOut>", persist_browser_path)
+browser_path_entry.bind("<Return>", persist_browser_path)
+
+profile_naming = ttk.LabelFrame(settings_tab, text="Penamaan Profil", padding=12, style="Card.TLabelframe")
+profile_naming.pack(fill="x", pady=(0, 12))
+profile_naming.columnconfigure(0, weight=1)
+profile_naming.columnconfigure(1, weight=1)
+
+desktop_profile_pattern_var = tk.StringVar(value=profile_patterns["desktop"])
+mobile_profile_pattern_var = tk.StringVar(value=profile_patterns["mobile"])
+
+ttk.Label(profile_naming, text="Gunakan {n} sebagai placeholder nomor profil.", background="#ffffff").grid(row=0, column=0, columnspan=2, sticky="w", pady=(0, 6))
+
+ttk.Label(profile_naming, text="Desktop:", background="#ffffff").grid(row=1, column=0, sticky="w")
+desktop_profile_entry = ttk.Entry(profile_naming, textvariable=desktop_profile_pattern_var)
+desktop_profile_entry.grid(row=2, column=0, sticky="ew", padx=(0, 8), pady=(2, 6))
+desktop_profile_entry.bind("<FocusOut>", lambda e: persist_profile_pattern("desktop", e))
+desktop_profile_entry.bind("<Return>", lambda e: persist_profile_pattern("desktop", e))
+
+ttk.Label(profile_naming, text="Mobile:", background="#ffffff").grid(row=1, column=1, sticky="w")
+mobile_profile_entry = ttk.Entry(profile_naming, textvariable=mobile_profile_pattern_var)
+mobile_profile_entry.grid(row=2, column=1, sticky="ew", padx=(8, 0), pady=(2, 6))
+mobile_profile_entry.bind("<FocusOut>", lambda e: persist_profile_pattern("mobile", e))
+mobile_profile_entry.bind("<Return>", lambda e: persist_profile_pattern("mobile", e))
+
+scheduler_frame = ttk.LabelFrame(settings_tab, text="Scheduler", padding=12, style="Card.TLabelframe")
+scheduler_frame.pack(fill="x", pady=(0, 12))
+
+ttk.Label(scheduler_frame, text="Interval (menit):", background="#ffffff").pack(anchor="w")
+scheduler_interval_entry = ttk.Entry(scheduler_frame)
+scheduler_interval_entry.pack(anchor="w", pady=4)
+scheduler_interval_entry.insert(0, "10")
+
+scheduler_status_var = tk.StringVar(value="Scheduler stopped")
+scheduler_status_label = ttk.Label(scheduler_frame, textvariable=scheduler_status_var, background="#ffffff")
+scheduler_status_label.pack(anchor="w", pady=4)
+
+scheduler_buttons = ttk.Frame(scheduler_frame, style="Card.TFrame")
+scheduler_buttons.pack(anchor="w", pady=(4, 0))
+ttk.Button(scheduler_buttons, text="Start Scheduler", command=start_scheduler).pack(side="left", padx=4)
+ttk.Button(scheduler_buttons, text="Stop Scheduler", command=stop_scheduler).pack(side="left", padx=4)
+
+ads_settings = ttk.LabelFrame(settings_tab, text="Ads Settings", padding=12, style="Card.TLabelframe")
+ads_settings.pack(fill="x")
+
+ads_enabled_var = tk.BooleanVar(value=True)
+ads_toggle = ttk.Checkbutton(ads_settings, text="Enable ads", variable=ads_enabled_var, command=update_ads_visibility)
+ads_toggle.pack(anchor="w", pady=(0, 6))
+
+
+
+ads_button_row = ttk.Frame(ads_settings, style="Card.TFrame")
+ads_button_row.pack(fill="x", pady=(4, 0))
+ads_button_row.columnconfigure(0, weight=1)
+ads_button_row.rowconfigure(0, weight=1)
+ads_reload_button = tk.Button(
+    ads_button_row,
+    text="Reload Ads",
+    command=refresh_ad,
+    font=("Segoe UI", 10, "bold"),
+    bg="#e7edf5",
+    fg="#1f2933",
+    activebackground="#dbe3ef",
+    activeforeground="#1f2933",
+    relief="raised",
+    bd=1,
+    highlightthickness=0,
+    padx=12,
+    pady=6
+)
+ads_reload_button.grid(row=0, column=0, sticky="nsew")
+
+update_ads_visibility()
+ads_button_row.after(0, adjust_ads_button_row)
 
 update_profiles()
 root.mainloop()

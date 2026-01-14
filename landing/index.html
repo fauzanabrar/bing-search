@@ -1,0 +1,527 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Search Automation Suite</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Fraunces:wght@600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --bg: #f6f2ec;
+        --ink: #1b2330;
+        --ink-soft: #4a5566;
+        --accent: #ff6b3d;
+        --accent-deep: #c74722;
+        --mint: #1aa179;
+        --panel: #ffffff;
+        --stroke: #e4dcd2;
+        --shadow: 0 22px 45px rgba(15, 21, 31, 0.14);
+        --radius: 22px;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        font-family: "Space Grotesk", "Trebuchet MS", sans-serif;
+        color: var(--ink);
+        background:
+          radial-gradient(1200px circle at 10% 8%, #ffe6d6 0%, transparent 55%),
+          radial-gradient(900px circle at 90% 0%, #d6efff 0%, transparent 50%),
+          linear-gradient(180deg, #f6f2ec 0%, #f3efe8 100%);
+        min-height: 100vh;
+      }
+
+      body::before {
+        content: "";
+        position: fixed;
+        inset: 0;
+        background-image:
+          linear-gradient(120deg, rgba(255, 255, 255, 0.45) 0%, rgba(255, 255, 255, 0) 65%),
+          radial-gradient(600px circle at 12% 86%, rgba(26, 161, 121, 0.18) 0%, transparent 60%);
+        pointer-events: none;
+        z-index: -1;
+      }
+
+      a {
+        color: inherit;
+        text-decoration: none;
+      }
+
+      .page {
+        max-width: 1180px;
+        margin: 0 auto;
+        padding: 36px 24px 80px;
+      }
+
+      .nav {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        margin-bottom: 42px;
+      }
+
+      .logo {
+        font-weight: 700;
+        letter-spacing: 0.5px;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+
+      .logo-badge {
+        width: 36px;
+        height: 36px;
+        border-radius: 12px;
+        background: linear-gradient(140deg, var(--accent) 0%, #ffb34d 90%);
+        display: grid;
+        place-items: center;
+        color: #ffffff;
+        font-weight: 700;
+        font-size: 16px;
+      }
+
+      .nav-links {
+        display: flex;
+        gap: 18px;
+        font-size: 14px;
+        color: var(--ink-soft);
+      }
+
+      .hero {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 36px;
+        align-items: center;
+        margin-bottom: 60px;
+      }
+
+      .eyebrow {
+        text-transform: uppercase;
+        font-size: 12px;
+        letter-spacing: 2px;
+        color: var(--accent-deep);
+        font-weight: 600;
+      }
+
+      h1 {
+        font-family: "Fraunces", "Georgia", serif;
+        font-size: clamp(34px, 4vw, 52px);
+        line-height: 1.06;
+        margin: 14px 0 18px;
+      }
+
+      .lead {
+        font-size: 18px;
+        line-height: 1.6;
+        color: var(--ink-soft);
+        margin-bottom: 26px;
+      }
+
+      .cta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        margin-bottom: 24px;
+      }
+
+      .btn {
+        padding: 12px 20px;
+        border-radius: 999px;
+        border: 1px solid transparent;
+        font-weight: 600;
+        letter-spacing: 0.2px;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+      }
+
+      .btn.primary {
+        background: var(--accent);
+        color: #ffffff;
+        box-shadow: 0 16px 24px rgba(255, 107, 61, 0.32);
+      }
+
+      .btn.ghost {
+        border-color: var(--stroke);
+        color: var(--ink);
+        background: rgba(255, 255, 255, 0.6);
+      }
+
+      .btn:hover {
+        transform: translateY(-2px);
+      }
+
+      .hero-card {
+        background: var(--panel);
+        border-radius: var(--radius);
+        border: 1px solid var(--stroke);
+        box-shadow: var(--shadow);
+        padding: 26px;
+        display: grid;
+        gap: 18px;
+      }
+
+      .hero-card h3 {
+        margin: 0;
+        font-size: 16px;
+        text-transform: uppercase;
+        letter-spacing: 1.8px;
+        color: var(--ink-soft);
+      }
+
+      .stat-grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 12px;
+      }
+
+      .stat {
+        background: #f8f4ef;
+        border-radius: 16px;
+        padding: 14px;
+        border: 1px solid var(--stroke);
+      }
+
+      .stat strong {
+        display: block;
+        font-size: 20px;
+      }
+
+      .stat span {
+        font-size: 12px;
+        color: var(--ink-soft);
+        text-transform: uppercase;
+        letter-spacing: 1.4px;
+      }
+
+      .pill-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+
+      .pill {
+        padding: 6px 12px;
+        border-radius: 999px;
+        border: 1px solid var(--stroke);
+        font-size: 13px;
+        background: #ffffff;
+      }
+
+      .sections {
+        display: grid;
+        gap: 42px;
+      }
+
+      .download-grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 18px;
+      }
+
+      .download-card {
+        background: var(--panel);
+        border-radius: 20px;
+        border: 1px solid var(--stroke);
+        padding: 22px;
+        display: grid;
+        gap: 12px;
+        box-shadow: 0 14px 30px rgba(27, 35, 48, 0.08);
+      }
+
+      .download-card h4 {
+        margin: 0;
+        font-size: 20px;
+      }
+
+      .download-card p {
+        margin: 0;
+        color: var(--ink-soft);
+        line-height: 1.5;
+      }
+
+      .feature-grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 18px;
+      }
+
+      .card {
+        background: var(--panel);
+        border-radius: 20px;
+        border: 1px solid var(--stroke);
+        padding: 20px;
+        box-shadow: 0 14px 30px rgba(27, 35, 48, 0.08);
+      }
+
+      .card h4 {
+        margin: 0 0 10px;
+        font-size: 18px;
+      }
+
+      .card p {
+        margin: 0;
+        color: var(--ink-soft);
+        line-height: 1.5;
+      }
+
+      .workflow {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 20px;
+      }
+
+      .step {
+        padding: 20px;
+        border-radius: 20px;
+        background: #fff8f2;
+        border: 1px dashed rgba(255, 107, 61, 0.5);
+      }
+
+      .step span {
+        font-size: 12px;
+        letter-spacing: 2px;
+        text-transform: uppercase;
+        color: var(--accent-deep);
+      }
+
+      .step h5 {
+        margin: 10px 0;
+        font-size: 18px;
+      }
+
+      .ad-zone {
+        margin-top: 24px;
+        display: grid;
+        gap: 12px;
+      }
+
+      .ad-shell {
+        border-radius: 20px;
+        border: 1px solid var(--stroke);
+        background: #ffffff;
+        padding: 20px;
+        display: grid;
+        gap: 12px;
+        justify-items: center;
+      }
+
+      .ad-label {
+        font-size: 12px;
+        text-transform: uppercase;
+        letter-spacing: 2px;
+        color: var(--ink-soft);
+      }
+
+      .ad-slot {
+        width: min(100%, 728px);
+        border-radius: 16px;
+        border: 1px dashed #d9d2c7;
+        display: grid;
+        place-items: center;
+        color: var(--ink-soft);
+        text-align: center;
+        padding: 16px;
+      }
+
+      .footer {
+        margin-top: 60px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        color: var(--ink-soft);
+        font-size: 14px;
+      }
+
+      .reveal {
+        animation: rise 0.7s ease forwards;
+        opacity: 0;
+        transform: translateY(18px);
+      }
+
+      @keyframes rise {
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        .reveal {
+          animation: none;
+          opacity: 1;
+          transform: none;
+        }
+      }
+
+      @media (max-width: 960px) {
+        .hero {
+          grid-template-columns: 1fr;
+        }
+
+        .feature-grid,
+        .workflow,
+        .download-grid,
+        .stat-grid {
+          grid-template-columns: 1fr;
+        }
+
+        .nav {
+          flex-direction: column;
+          align-items: flex-start;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="page">
+      <nav class="nav">
+        <div class="logo">
+          <div class="logo-badge">BS</div>
+          Search Automation Suite
+        </div>
+        <div class="nav-links">
+          <a href="#features">Features</a>
+          <a href="#workflow">Workflow</a>
+          <a href="#download">Download</a>
+        </div>
+      </nav>
+
+      <header class="hero">
+        <div class="hero-copy reveal">
+          <div class="eyebrow">Desktop automation toolkit</div>
+          <h1>Automate multi-profile browser runs with calm control.</h1>
+          <p class="lead">
+            Search Automation Suite combines a desktop runner, keyword service,
+            and scheduler so you can manage search activity without juggling tabs.
+          </p>
+          <div class="cta">
+            <a class="btn primary" href="#workflow">See the flow</a>
+          </div>
+          <div class="pill-row">
+            <div class="pill">Edge, Chrome, Firefox</div>
+            <div class="pill">Desktop + Mobile UAs</div>
+            <div class="pill">Profile ranges</div>
+            <div class="pill">Scheduler</div>
+          </div>
+        </div>
+        <div class="hero-card reveal" style="animation-delay: 0.1s">
+          <h3>At a glance</h3>
+          <div class="stat-grid">
+            <div class="stat">
+              <strong>3</strong>
+              <span>Browsers</span>
+            </div>
+            <div class="stat">
+              <strong>2</strong>
+              <span>UA modes</span>
+            </div>
+            <div class="stat">
+              <strong>1</strong>
+              <span>Scheduler</span>
+            </div>
+          </div>
+          <div class="pill-row">
+            <div class="pill">Profile naming templates</div>
+            <div class="pill">Skip list control</div>
+            <div class="pill">Keyword management UI</div>
+          </div>
+          <div class="card" style="background: #f8f4ef">
+            <h4>Desktop runner</h4>
+            <p>
+              Launches profiles with rotating queries, handles waits, and closes browsers
+              cleanly between runs.
+            </p>
+          </div>
+        </div>
+      </header>
+
+      <main class="sections">
+        <section id="features" class="reveal">
+          <h2>What the suite includes</h2>
+          <div class="feature-grid">
+            <div class="card">
+              <h4>Browser Query Runner</h4>
+              <p>Launches Edge, Chrome, or Firefox with profile ranges and custom wait times.</p>
+            </div>
+            <div class="card">
+              <h4>Keyword Service</h4>
+              <p>Flask API for loading, refreshing, and sampling keyword pools.</p>
+            </div>
+            <div class="card">
+              <h4>Automation Scheduler</h4>
+              <p>Runs desktop and mobile sessions on a repeating interval.</p>
+            </div>
+          </div>
+        </section>
+
+        <section id="workflow" class="reveal" style="animation-delay: 0.12s">
+          <h2>Workflow in three steps</h2>
+          <div class="workflow">
+            <div class="step">
+              <span>Step 01</span>
+              <h5>Load keywords</h5>
+              <p>Add keywords or import a file into the service.</p>
+            </div>
+            <div class="step">
+              <span>Step 02</span>
+              <h5>Configure profiles</h5>
+              <p>Choose browser profiles, user agents, and skip lists.</p>
+            </div>
+            <div class="step">
+              <span>Step 03</span>
+              <h5>Run or schedule</h5>
+              <p>Start immediately or let the scheduler handle it.</p>
+            </div>
+          </div>
+        </section>
+
+        <section id="download" class="reveal" style="animation-delay: 0.16s">
+          <h2>Download the desktop GUI</h2>
+          <div class="download-grid">
+            <div class="download-card">
+              <h4>Windows build</h4>
+              <p>Package for Windows 10/11. Replace the link with your hosted EXE.</p>
+              <a class="btn primary" href="https://example.com/gui-edge-windows.exe" download>Download for Windows</a>
+            </div>
+            <div class="download-card">
+              <h4>Linux build</h4>
+              <p>Package for Linux (AppImage/tar.gz). Replace the link with your hosted file.</p>
+              <a class="btn ghost" href="https://example.com/gui-edge-linux.tar.gz" download>Download for Linux</a>
+            </div>
+          </div>
+        </section>
+
+        <section id="sponsor" class="ad-zone reveal" style="animation-delay: 0.2s">
+          <div class="ad-shell">
+            <div class="ad-label">Ad placement</div>
+            <div class="ad-slot" id="ad-slot">
+              <script async="async" data-cfasync="false" src="https://pl28473440.effectivegatecpm.com/577b1eae4fcdd1412dd09d7cff191561/invoke.js"></script>
+              <div id="container-577b1eae4fcdd1412dd09d7cff191561"></div>
+              <script async="async" data-cfasync="false" src="https://pl28473440.effectivegatecpm.com/577b1eae4fcdd1412dd09d7cff191561/invoke.js"></script>
+              <div id="container-577b1eae4fcdd1412dd09d7cff191561"></div>
+              <script async="async" data-cfasync="false" src="https://pl28473440.effectivegatecpm.com/577b1eae4fcdd1412dd09d7cff191561/invoke.js"></script>
+              <div id="container-577b1eae4fcdd1412dd09d7cff191561"></div>
+            </div>
+          </div>
+        </section>
+      </main>
+
+      <footer class="footer">
+        <div>Built for the Search Automation Suite.</div>
+        <div>Host this page and use the URL for ad network registration.</div>
+      </footer>
+    </div>
+  </body>
+</html>
