@@ -294,6 +294,126 @@
       from { opacity: 0; transform: translateY(-10px); }
       to { opacity: 1; transform: translateY(0); }
     }
+
+    /* Premium Danger Modal Styles */
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(15, 23, 42, 0.4);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      z-index: 9999;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.25s ease;
+    }
+    .modal-overlay.active {
+      opacity: 1;
+      pointer-events: auto;
+    }
+    .modal-content {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      width: 95%;
+      max-width: 480px;
+      padding: 30px;
+      box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.15);
+      transform: translateY(20px) scale(0.95);
+      transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+    .modal-overlay.active .modal-content {
+      transform: translateY(0) scale(1);
+    }
+    .modal-header {
+      display: flex;
+      align-items: center;
+      gap: 15px;
+      margin-bottom: 20px;
+    }
+    .modal-warning-icon {
+      background-color: #fee2e2;
+      color: #ef4444;
+      font-size: 1.5rem;
+      width: 46px;
+      height: 46px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .modal-header h3 {
+      font-size: 1.3rem;
+      font-weight: 700;
+      color: #111827;
+      margin: 0;
+    }
+    .modal-body {
+      color: #374151;
+      font-size: 0.95rem;
+      line-height: 1.6;
+      margin-bottom: 24px;
+    }
+    .modal-warning-box {
+      background-color: #fffbeb;
+      border-left: 4px solid #f59e0b;
+      color: #78350f;
+      padding: 12px 16px;
+      border-radius: 0 8px 8px 0;
+      font-size: 0.85rem;
+      font-weight: 500;
+      margin: 15px 0;
+    }
+    .modal-input {
+      width: 100%;
+      padding: 12px 16px;
+      border: 2px solid var(--border);
+      border-radius: 10px;
+      font-family: inherit;
+      font-size: 0.95rem;
+      font-weight: 600;
+      text-align: center;
+      letter-spacing: 0.05em;
+      box-sizing: border-box;
+      transition: all 0.2s ease;
+      margin-top: 8px;
+    }
+    .modal-input:focus {
+      outline: none;
+      border-color: #ef4444;
+      box-shadow: 0 0 0 4px rgba(239, 68, 68, 0.15);
+    }
+    .modal-footer {
+      display: flex;
+      justify-content: flex-end;
+      gap: 12px;
+    }
+    .btn-danger-action {
+      background-color: #ef4444 !important;
+      color: white !important;
+      border: none !important;
+      font-weight: 600 !important;
+      padding: 10px 24px;
+      border-radius: 8px;
+      cursor: not-allowed;
+      opacity: 0.5;
+      transition: all 0.2s ease;
+    }
+    .btn-danger-action.ready {
+      cursor: pointer;
+      opacity: 1;
+    }
+    .btn-danger-action.ready:hover {
+      background-color: #dc2626 !important;
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+    }
   </style>
 </head>
 
@@ -352,7 +472,61 @@
     </div>
   </div>
 
+  <!-- Batch Action card -->
+  <div class="card" style="margin-top: 25px; border: 1px solid rgba(239, 68, 68, 0.15); background: linear-gradient(to bottom, var(--card-bg), #fffbfa);">
+    <h2 style="color: #991b1b; display: flex; align-items: center; gap: 8px; margin-bottom: 5px;">
+      <span>🗑️</span> Batch Keyword Purge Center
+    </h2>
+    <p class="description">Perform bulk deletions of active keywords from your database, files, and system cache.</p>
+    
+    <div style="display: flex; flex-wrap: wrap; gap: 12px; margin-top: 15px;">
+      <!-- Option 1: Delete Filtered list -->
+      <button class="btn btn-danger" onclick="deleteCurrentFiltered()" style="background-color: #ef4444; color: white; display: flex; align-items: center; gap: 6px;">
+        <span>🔍</span> Purge Displayed List (<span id="deleteFilteredCountBadge">0</span>)
+      </button>
+      
+      <!-- Option 2: Toggle custom paste section -->
+      <button class="btn btn-secondary" onclick="togglePasteDeleteSection()" style="display: flex; align-items: center; gap: 6px;">
+        <span>📝</span> Purge Custom Pasted List
+      </button>
+    </div>
+
+    <!-- Collapsible Custom Paste Delete Section -->
+    <div id="pasteDeleteSection" style="display: none; margin-top: 20px; border-top: 1px dashed var(--border); padding-top: 15px; animation: fadeIn 0.3s ease;">
+      <label style="font-size: 0.875rem; font-weight: 700; color: #111827; display: block; margin-bottom: 6px;">
+        Paste keywords to delete (one per line):
+      </label>
+      <textarea id="pasteDeleteInput" placeholder="Paste target keywords here...&#10;e.g.&#10;keyword1&#10;keyword2" style="width: 100%; height: 120px; font-family: inherit; font-size: 0.9rem; padding: 12px; border: 1px solid var(--border); border-radius: 8px; box-sizing: border-box; resize: vertical; margin-bottom: 12px;"></textarea>
+      
+      <button class="btn btn-danger" onclick="deletePastedList()" style="background-color: #dc2626; color: white;">
+        🗑️ Delete Pasted Keywords
+      </button>
+    </div>
+  </div>
+
   <div id="message"></div>
+
+  <!-- Custom Premium Danger Modal -->
+  <div id="dangerModal" class="modal-overlay" style="display: none;" onclick="if(event.target === this) closeDangerModal()">
+    <div class="modal-content">
+      <div class="modal-header">
+        <div class="modal-warning-icon">⚠️</div>
+        <h3>Critical Action Required</h3>
+      </div>
+      <div class="modal-body">
+        <p style="margin-top: 0; margin-bottom: 5px;">You are about to permanently delete <strong id="deleteCountPlaceholder">0</strong> keywords from this system.</p>
+        <div class="modal-warning-box">
+          This operation is extremely destructive and will remove the keywords from database files, lists, and cache memory. It cannot be undone.
+        </div>
+        <p style="margin-bottom: 8px;">To verify and proceed, please type the word <strong style="color: #ef4444;">DELETE</strong> in the box below:</p>
+        <input type="text" id="confirmDeleteInput" class="modal-input" placeholder="Type DELETE to confirm" autocomplete="off" />
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeDangerModal()">Cancel</button>
+        <button class="btn btn-danger-action" id="modalConfirmBtn" onclick="submitDangerWipe()" disabled>Purge Selected</button>
+      </div>
+    </div>
+  </div>
 
   <script>
     // Initialize active link in Navbar
@@ -429,7 +603,132 @@
       
       keywordList.value = formattedLines.join('\n');
       filteredCount.textContent = filtered.length;
+      document.getElementById('deleteFilteredCountBadge').textContent = filtered.length;
     }
+
+    function togglePasteDeleteSection() {
+      const section = document.getElementById('pasteDeleteSection');
+      section.style.display = section.style.display === 'none' ? 'block' : 'none';
+      if (section.style.display === 'block') {
+        document.getElementById('pasteDeleteInput').focus();
+      }
+    }
+
+    function getCurrentlyFilteredKeywords() {
+      const filterText = document.getElementById('searchFilter').value.toLowerCase().trim();
+      let filtered = allKeywords;
+      if (filterText) {
+        filtered = allKeywords.filter(item => item.keyword.toLowerCase().includes(filterText));
+      }
+      return filtered.map(item => item.keyword);
+    }
+
+    async function deleteKeywordsBatch(keywordsToDelete) {
+      if (!keywordsToDelete || keywordsToDelete.length === 0) {
+        showMessage('No keywords provided for deletion', true);
+        return;
+      }
+      
+      try {
+        showMessage('Deleting keywords from system, please wait...');
+        const response = await fetch('/api/delete_keywords', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({ keywords: keywordsToDelete })
+        });
+        
+        const data = await response.json();
+        showMessage(data.message, !response.ok);
+        if (response.ok) {
+          displayKeywords(); // Reload to refresh list
+        }
+      } catch (error) {
+        showMessage('Error deleting keywords: ' + error.message, true);
+      }
+    }
+
+    let pendingKeywordsToDelete = [];
+
+    function openDangerModal(keywordsToDelete) {
+      if (!keywordsToDelete || keywordsToDelete.length === 0) {
+        showMessage('No keywords provided for deletion', true);
+        return;
+      }
+      pendingKeywordsToDelete = keywordsToDelete;
+      
+      const modal = document.getElementById('dangerModal');
+      const input = document.getElementById('confirmDeleteInput');
+      const btn = document.getElementById('modalConfirmBtn');
+      const countEl = document.getElementById('deleteCountPlaceholder');
+      
+      countEl.textContent = keywordsToDelete.length.toLocaleString();
+      input.value = '';
+      btn.disabled = true;
+      btn.classList.remove('ready');
+      
+      modal.style.display = 'flex';
+      setTimeout(() => {
+        modal.classList.add('active');
+        input.focus();
+      }, 10);
+    }
+
+    function closeDangerModal() {
+      const modal = document.getElementById('dangerModal');
+      modal.classList.remove('active');
+      setTimeout(() => {
+        modal.style.display = 'none';
+        pendingKeywordsToDelete = [];
+      }, 250);
+    }
+
+    async function submitDangerWipe() {
+      const input = document.getElementById('confirmDeleteInput');
+      if (input.value !== 'DELETE') return;
+      if (pendingKeywordsToDelete.length === 0) return;
+      
+      const list = pendingKeywordsToDelete;
+      closeDangerModal();
+      
+      await deleteKeywordsBatch(list);
+    }
+
+    async function deleteCurrentFiltered() {
+      const targetKeywords = getCurrentlyFilteredKeywords();
+      if (targetKeywords.length === 0) {
+        alert('There are no keywords displayed to delete.');
+        return;
+      }
+      openDangerModal(targetKeywords);
+    }
+
+    async function deletePastedList() {
+      const pasteInput = document.getElementById('pasteDeleteInput');
+      const lines = pasteInput.value.split('\n').map(line => line.trim()).filter(line => line);
+      
+      if (lines.length === 0) {
+        alert('Please paste at least one keyword to delete.');
+        return;
+      }
+      
+      openDangerModal(lines);
+      pasteInput.value = '';
+      document.getElementById('pasteDeleteSection').style.display = 'none';
+    }
+
+    // Set up challenge validation input event listener
+    document.getElementById('confirmDeleteInput').addEventListener('input', function(e) {
+      const btn = document.getElementById('modalConfirmBtn');
+      if (e.target.value === 'DELETE') {
+        btn.disabled = false;
+        btn.classList.add('ready');
+      } else {
+        btn.disabled = true;
+        btn.classList.remove('ready');
+      }
+    });
 
     // Initial load of keywords when page loads
     document.addEventListener('DOMContentLoaded', displayKeywords);

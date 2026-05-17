@@ -841,5 +841,61 @@ def clear_all_data():
         return jsonify({"status": "error", "message": f"Failed to clear data: {str(e)}"}), 500
 
 
+@app.route("/api/delete_keywords", methods=["POST"])
+def delete_keywords():
+    try:
+        data = request.json or {}
+        keyword_list = data.get("keywords", [])
+        if not keyword_list:
+            return jsonify({"status": "error", "message": "No keywords provided for deletion"}), 400
+            
+        target_keywords = set(k.strip() for k in keyword_list if k.strip())
+        if not target_keywords:
+            return jsonify({"status": "error", "message": "No valid keywords provided"}), 400
+            
+        success_count = 0
+        
+        with lock:
+            if USE_DATABASE:
+                try:
+                    # Bulk delete from PostgreSQL database
+                    deleted = db.session.query(Keyword).filter(Keyword.keyword.in_(target_keywords)).delete(synchronize_session=False)
+                    db.session.commit()
+                    success_count = deleted
+                except Exception as db_err:
+                    db.session.rollback()
+                    logger.error(f"Database deletion failed: {db_err}")
+                    raise db_err
+            else:
+                # File-based deletion
+                if os.path.exists('keywords.txt'):
+                    with open('keywords.txt', 'r', encoding='utf-8') as f:
+                        kws = [line.strip() for line in f if line.strip()]
+                    
+                    updated_kws = [kw for kw in kws if kw not in target_keywords]
+                    success_count = len(kws) - len(updated_kws)
+                    
+                    with open('keywords.txt', 'w', encoding='utf-8') as f:
+                        for kw in updated_kws:
+                            f.write(kw + '\n')
+            
+            # Clean up active memory list
+            global keywords
+            keywords = [kw for kw in keywords if kw not in target_keywords]
+            
+            # Clean up called counts tracker
+            counts = load_called_counts()
+            cleaned_counts = {k: v for k, v in counts.items() if k not in target_keywords}
+            save_called_counts(cleaned_counts)
+            
+            logger.info(f"Successfully deleted {success_count} keywords.")
+            return jsonify({
+                "status": "success",
+                "message": f"Successfully deleted {success_count} keywords from the system."
+            })
+    except Exception as e:
+        return jsonify({"status": "error", "message": f"Failed to delete keywords: {str(e)}"}), 500
+
+
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=3000)
