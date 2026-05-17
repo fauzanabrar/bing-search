@@ -2,81 +2,433 @@
 <html>
 
 <head>
-  <title>Keywords List</title>
+  <title>Keywords List - Bing Search Automation Suite</title>
   <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+    
+    :root {
+      --primary: #4f46e5;
+      --primary-hover: #4338ca;
+      --secondary: #6b7280;
+      --secondary-hover: #4b5563;
+      --success: #10b981;
+      --success-hover: #059669;
+      --background: #f3f4f6;
+      --card-bg: #ffffff;
+      --text: #1f2937;
+      --text-muted: #6b7280;
+      --border: #e5e7eb;
+    }
+
     body {
-      font-family: Arial, sans-serif;
+      font-family: 'Inter', sans-serif;
+      background-color: var(--background);
+      color: var(--text);
       max-width: 800px;
       margin: 0 auto;
-      padding: 20px;
+      padding: 40px 20px;
+      line-height: 1.5;
+    }
+
+    /* Top Navigation bar */
+    .nav-container {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 14px 24px;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+      margin-bottom: 30px;
+      flex-wrap: wrap;
+      gap: 15px;
+    }
+
+    .nav-brand {
+      font-size: 1.15rem;
+      font-weight: 700;
+      color: #111827;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .nav-links {
+      display: flex;
+      gap: 10px;
+    }
+
+    .nav-link {
+      text-decoration: none;
+      color: var(--text-muted);
+      font-size: 0.95rem;
+      font-weight: 500;
+      padding: 8px 16px;
+      border-radius: 8px;
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .nav-link:hover {
+      color: var(--primary);
+      background-color: #f3f4f6;
+    }
+
+    .nav-link.active {
+      color: white;
+      background-color: var(--primary);
+    }
+
+    h2 {
+      font-size: 1.25rem;
+      font-weight: 600;
+      margin-top: 0;
+      margin-bottom: 0;
+      color: #111827;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 24px;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+      margin-bottom: 24px;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .card:hover {
+      box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05), 0 4px 6px -2px rgba(0, 0, 0, 0.02);
+    }
+
+    .header-actions {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 24px;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 10px 20px;
+      font-size: 0.95rem;
+      font-weight: 500;
+      border-radius: 8px;
+      border: 1px solid transparent;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      gap: 8px;
+    }
+
+    .btn-primary {
+      background-color: var(--primary);
+      color: white;
+    }
+
+    .btn-primary:hover {
+      background-color: var(--primary-hover);
+    }
+
+    .btn-secondary {
+      background-color: white;
+      border-color: var(--border);
+      color: var(--text);
+    }
+
+    .btn-secondary:hover {
+      background-color: #f9fafb;
+      border-color: #d1d5db;
+    }
+
+    .stats-container {
+      display: flex;
+      gap: 15px;
+      margin-bottom: 20px;
+    }
+
+    .stat-badge {
+      background: #f9fafb;
+      border: 1px solid var(--border);
+      padding: 10px 16px;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      font-weight: 500;
+      color: #374151;
+    }
+
+    .stat-badge span {
+      font-weight: 700;
+      color: var(--primary);
+    }
+
+    .search-sort-container {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 15px;
+      margin-bottom: 20px;
+    }
+
+    @media (min-width: 640px) {
+      .search-sort-container {
+        grid-template-columns: 2fr 1fr;
+      }
+    }
+
+    .search-box {
+      width: 100%;
+    }
+
+    .sort-box {
+      width: 100%;
+    }
+
+    .search-input {
+      width: 100%;
+      padding: 12px 16px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      font-family: inherit;
+      font-size: 0.95rem;
+      box-sizing: border-box;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+
+    .search-input:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.15);
+    }
+
+    .sort-input {
+      width: 100%;
+      padding: 12px 16px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      font-family: inherit;
+      font-size: 0.95rem;
+      background-color: white;
+      box-sizing: border-box;
+      cursor: pointer;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+
+    .sort-input:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.15);
+    }
+
+    .list-wrapper {
+      position: relative;
     }
 
     textarea {
       width: 100%;
       height: 400px;
-      margin: 10px 0;
-      background-color: #f8f9fa;
+      padding: 16px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      font-family: inherit;
+      font-size: 0.95rem;
+      line-height: 1.6;
+      resize: none;
+      box-sizing: border-box;
+      background-color: #f9fafb;
+      color: var(--text);
+      transition: border-color 0.2s;
     }
 
-    button {
-      padding: 10px 20px;
-      margin: 5px;
-      cursor: pointer;
+    textarea:focus {
+      outline: none;
+      border-color: var(--primary);
+    }
+
+    /* Custom Scrollbar for Textarea */
+    textarea::-webkit-scrollbar {
+      width: 8px;
+    }
+    textarea::-webkit-scrollbar-track {
+      background: #f1f1f1;
+      border-radius: 0 8px 8px 0;
+    }
+    textarea::-webkit-scrollbar-thumb {
+      background: #c1c1c1;
+      border-radius: 4px;
+    }
+    textarea::-webkit-scrollbar-thumb:hover {
+      background: #a8a8a8;
     }
 
     #message {
-      margin: 10px 0;
-      padding: 10px;
+      margin: 20px 0;
+      padding: 16px;
+      border-radius: 8px;
+      font-weight: 500;
       display: none;
+      animation: fadeIn 0.3s ease;
     }
 
     .success {
-      background-color: #dff0d8;
-      color: #3c763d;
+      background-color: #ecfdf5;
+      color: #065f46;
+      border: 1px solid #a7f3d0;
     }
 
     .error {
-      background-color: #f2dede;
-      color: #a94442;
+      background-color: #fef2f2;
+      color: #991b1b;
+      border: 1px solid #fca5a5;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(-10px); }
+      to { opacity: 1; transform: translateY(0); }
     }
   </style>
 </head>
 
 <body>
-  <h1>Keywords List</h1>
-  <div>
-    <button onclick="window.location.href='/'">Back to Manager</button>
-    <button onclick="displayKeywords()">Refresh List</button>
+  <!-- Navigation Header Menu -->
+  <div class="nav-container">
+    <div class="nav-brand">🌐 Bing Search Suite</div>
+    <div class="nav-links">
+      <a href="/" id="nav-home" class="nav-link">📊 Dashboard</a>
+      <a href="/keywords" id="nav-keywords" class="nav-link">📋 Keywords</a>
+      <a href="/settings" id="nav-settings" class="nav-link">⚙️ Settings</a>
+    </div>
   </div>
+  <div class="card">
+    <div class="header-actions">
+      <h2><span>📋</span> Keywords List</h2>
+      <div>
+        <button class="btn btn-primary" onclick="displayKeywords()">
+          <span>🔄</span> Refresh List
+        </button>
+      </div>
+    </div>
+
+    <div class="stats-container">
+      <div class="stat-badge">
+        Total Vocabulary: <span id="keywordCount">0</span>
+      </div>
+      <div class="stat-badge">
+        Filtered Count: <span id="filteredCount">0</span>
+      </div>
+    </div>
+
+    <div class="search-sort-container">
+      <div class="search-box">
+        <input type="text" id="searchFilter" class="search-input" placeholder="🔍 Real-time search and filter keywords..." oninput="filterAndSortKeywords()" />
+      </div>
+      <div class="sort-box">
+        <select id="sortSelect" class="sort-input" onchange="filterAndSortKeywords()">
+          <option value="alphabetical-asc">🔤 Alphabetical (A-Z)</option>
+          <option value="alphabetical-desc">🔤 Alphabetical (Z-A)</option>
+          <option value="count-desc">🔥 Called Count (High to Low)</option>
+          <option value="count-asc">❄️ Called Count (Low to High)</option>
+        </select>
+      </div>
+    </div>
+
+    <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 15px; margin-top: -5px; padding-left: 2px;">
+      <input type="checkbox" id="showCountsCheckbox" checked onchange="filterAndSortKeywords()" style="width: 16px; height: 16px; cursor: pointer; accent-color: var(--primary);" />
+      <label for="showCountsCheckbox" style="font-size: 0.875rem; font-weight: 500; color: var(--text-muted); cursor: pointer; user-select: none; display: flex; align-items: center; gap: 4px;">
+        📊 Show called counts in list (e.g. <code>keyword [Count: X]</code>)
+      </label>
+    </div>
+
+    <div class="list-wrapper">
+      <textarea id="keywordList" readonly placeholder="Loading keywords..."></textarea>
+    </div>
+  </div>
+
   <div id="message"></div>
-  <div id="stats">Total Keywords: <span id="keywordCount">0</span></div>
-  <textarea id="keywordList" readonly></textarea>
 
   <script>
+    // Initialize active link in Navbar
+    document.getElementById('nav-keywords').classList.add('active');
+
+    let allKeywords = []; // Array of { keyword: string, count: number }
+
     function showMessage(message, isError = false) {
       const msgDiv = document.getElementById('message');
       msgDiv.textContent = message;
       msgDiv.className = isError ? 'error' : 'success';
       msgDiv.style.display = 'block';
-      setTimeout(() => msgDiv.style.display = 'none', 5000);
+      setTimeout(() => msgDiv.style.display = 'none', 6000);
     }
 
     async function displayKeywords() {
       try {
-        const response = await fetch('/get_keywords');
+        const response = await fetch('/get_keywords_with_counts');
         const data = await response.json();
 
         if (data.keywords) {
-          const keywordList = document.getElementById('keywordList');
-          const keywordCount = document.getElementById('keywordCount');
-          keywordList.value = data.keywords.join('\n');
-          keywordCount.textContent = data.total_count;
+          allKeywords = data.keywords;
+          document.getElementById('keywordCount').textContent = data.keywords.length;
+          document.getElementById('keywordList').placeholder = "No keywords available.";
+          filterAndSortKeywords(); // Run filter and sort to render initially
         } else {
           showMessage('No keywords available', true);
+          document.getElementById('keywordList').placeholder = "No keywords available.";
         }
       } catch (error) {
         showMessage('Error fetching keywords', true);
+        document.getElementById('keywordList').placeholder = "Error loading keywords.";
       }
+    }
+
+    function filterAndSortKeywords() {
+      const filterText = document.getElementById('searchFilter').value.toLowerCase().trim();
+      const sortValue = document.getElementById('sortSelect').value;
+      const keywordList = document.getElementById('keywordList');
+      const filteredCount = document.getElementById('filteredCount');
+
+      // 1. Filter
+      let filtered = allKeywords;
+      if (filterText) {
+        filtered = allKeywords.filter(item => item.keyword.toLowerCase().includes(filterText));
+      }
+
+      // 2. Sort (slice to avoid mutating the master filter array directly)
+      filtered = filtered.slice();
+      if (sortValue === 'alphabetical-asc') {
+        filtered.sort((a, b) => a.keyword.localeCompare(b.keyword));
+      } else if (sortValue === 'alphabetical-desc') {
+        filtered.sort((a, b) => b.keyword.localeCompare(a.keyword));
+      } else if (sortValue === 'count-desc') {
+        filtered.sort((a, b) => b.count - a.count);
+      } else if (sortValue === 'count-asc') {
+        filtered.sort((a, b) => a.count - b.count);
+      }
+
+      // 3. Format and Render
+      const showCounts = document.getElementById('showCountsCheckbox').checked;
+      const formattedLines = filtered.map(item => {
+        return showCounts ? `${item.keyword} [Count: ${item.count}]` : item.keyword;
+      });
+      
+      // Update placeholder dynamically based on empty state
+      if (filtered.length === 0) {
+        if (filterText) {
+          keywordList.placeholder = "No matching keywords found.";
+        } else {
+          keywordList.placeholder = "No keywords available.";
+        }
+      }
+      
+      keywordList.value = formattedLines.join('\n');
+      filteredCount.textContent = filtered.length;
     }
 
     // Initial load of keywords when page loads

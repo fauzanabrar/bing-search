@@ -1,4 +1,18 @@
+import json
+import os
 import re
+
+# Load deletion threshold from settings.json
+deletion_threshold = 5
+try:
+    if os.path.exists('settings.json'):
+        with open('settings.json', 'r') as sf:
+            settings = json.load(sf)
+            deletion_threshold = settings.get('deletion_threshold', 5)
+except Exception:
+    pass
+
+prune_limit = deletion_threshold + 1
 
 # Parse keywords_called.txt and find keywords to remove
 to_remove = set()
@@ -9,7 +23,7 @@ with open('keywords_called.txt', 'r', encoding='utf-8') as f:
         m = re.match(r'^(.*?):(\d+)$', line)
         if m:
             keyword, count = m.group(1), int(m.group(2))
-            if count >= 6:
+            if count >= prune_limit:
                 to_remove.add(keyword)
             else:
                 called_lines.append(line)

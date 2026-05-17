@@ -1,0 +1,5 @@
+{
+    "deletion_threshold": 5,
+    "batch_size": 10,
+    "lock_timeout": 5
+}

@@ -45,18 +45,25 @@ pip install --upgrade pip
 pip install -r requirements.txt
 ```
 
-1. Create a PostgreSQL database (for example `bing_search`).
-2. Export `DATABASE_URL` before starting the Flask app:
+1. (Optional) Create a PostgreSQL database (for example `bing_search`) if you want database persistence.
+2. Configure your environment variables in `.env` (or export them):
 
+   **Option A: Database-Backed Mode (Default if DATABASE_URL is set)**
    ```bash
-   set DATABASE_URL=postgresql+psycopg2://user:password@localhost:5432/bing_search   # Windows (cmd)
-   $env:DATABASE_URL="postgresql+psycopg2://user:password@localhost:5432/bing_search" # PowerShell
-   export DATABASE_URL=postgresql+psycopg2://user:password@localhost:5432/bing_search # Linux/macOS
+   # In .env:
+   USE_DATABASE=true
+   DATABASE_URL=postgresql+psycopg2://user:password@localhost:5432/bing_search
    ```
 
-3. (Optional) Populate initial keywords:
-   - Put raw keywords (one per line) into `keywords.txt` or `scripts/keyword.txt`.
-   - Run `python scripts/convert-sql.py` to generate `scripts/insert.sql`, then execute it against PostgreSQL (`psql -f scripts/insert.sql`).
+   **Option B: File-Backed Mode (Uses keywords.txt directly)**
+   ```bash
+   # In .env:
+   USE_DATABASE=false
+   ```
+
+3. Populate initial keywords:
+   - **File-Backed**: Put raw keywords (one per line) into `keywords.txt` in the root directory.
+   - **Database-Backed**: Put raw keywords (one per line) into `keywords.txt` or `scripts/keyword.txt`, then run `python scripts/convert-sql.py` to generate `scripts/insert.sql` and execute it against PostgreSQL (`psql -f scripts/insert.sql`).
 
 ---
 
@@ -93,10 +100,10 @@ During startup SQLAlchemy will call `db.create_all()` to build the `keyword` tab
 
 ### Keyword Call Tracking
 
-- `keywords_called.txt` stores JSON containing how many times each keyword was served.
+- `keywords_called.txt` tracks how many times each keyword was served. To maintain full compatibility with the maintenance script (`refresh_keywords.py`), it writes counts in the standard `keyword:count` line format, with a robust fallback parser that can also load older JSON-formatted files.
 - `increment_keyword_count` bumps the counter whenever `/keyword` serves a record.
-- When a keyword reaches the deletion threshold (currently `>=5` inside `sync_called_counts_with_db`), the row is removed from PostgreSQL and the in-memory cache. Edit `CALLED_COUNTS_FILE` and the `>= 5` checks if you need different behavior.
-- `refresh_keywords.py` is still available for environments that rely solely on `keywords.txt`/`keywords_called.txt`. It expects the legacy `keyword:count` format. If your file has been rewritten as JSON, convert it back (or keep using the Flask-based cleanup instead of this script).
+- When a keyword reaches the deletion threshold (currently `>=5` inside `sync_called_counts`), it is deleted from the PostgreSQL database (if in database-backed mode) or from `keywords.txt` (if in file-backed mode) and the in-memory cache.
+- `refresh_keywords.py` remains available for bulk-cleaning and pruning both keyword files. It drops entries called ≥6 times and keeps everything fully synchronized.
 
 ---
 

@@ -4,88 +4,406 @@
 <head>
   <title>Keyword Manager</title>
   <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+    
+    :root {
+      --primary: #4f46e5;
+      --primary-hover: #4338ca;
+      --secondary: #6b7280;
+      --secondary-hover: #4b5563;
+      --success: #10b981;
+      --success-hover: #059669;
+      --warning: #f59e0b;
+      --warning-hover: #d97706;
+      --danger: #ef4444;
+      --background: #f3f4f6;
+      --card-bg: #ffffff;
+      --text: #1f2937;
+      --text-muted: #6b7280;
+      --border: #e5e7eb;
+    }
+
     body {
-      font-family: Arial, sans-serif;
+      font-family: 'Inter', sans-serif;
+      background-color: var(--background);
+      color: var(--text);
       max-width: 800px;
       margin: 0 auto;
-      padding: 20px;
+      padding: 40px 20px;
+      line-height: 1.5;
+    }
+
+    /* Top Navigation bar */
+    .nav-container {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 14px 24px;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+      margin-bottom: 30px;
+      flex-wrap: wrap;
+      gap: 15px;
+    }
+
+    .nav-brand {
+      font-size: 1.15rem;
+      font-weight: 700;
+      color: #111827;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .nav-links {
+      display: flex;
+      gap: 10px;
+    }
+
+    .nav-link {
+      text-decoration: none;
+      color: var(--text-muted);
+      font-size: 0.95rem;
+      font-weight: 500;
+      padding: 8px 16px;
+      border-radius: 8px;
+      transition: all 0.2s ease;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .nav-link:hover {
+      color: var(--primary);
+      background-color: #f3f4f6;
+    }
+
+    .nav-link.active {
+      color: white;
+      background-color: var(--primary);
+    }
+
+    h2 {
+      font-size: 1.25rem;
+      font-weight: 600;
+      margin-top: 0;
+      margin-bottom: 10px;
+      color: #111827;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    p.description {
+      font-size: 0.9rem;
+      color: var(--text-muted);
+      margin: 0 0 20px 0;
+    }
+
+    .card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 24px;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+      margin-bottom: 24px;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .card:hover {
+      box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05), 0 4px 6px -2px rgba(0, 0, 0, 0.02);
     }
 
     textarea {
       width: 100%;
-      height: 200px;
-      margin: 10px 0;
+      height: 180px;
+      padding: 12px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      font-family: inherit;
+      font-size: 0.95rem;
+      resize: vertical;
+      box-sizing: border-box;
+      transition: border-color 0.2s, box-shadow 0.2s;
+      margin-bottom: 15px;
     }
 
-    button {
+    textarea:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.15);
+    }
+
+    .btn-group {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
       padding: 10px 20px;
-      margin: 5px;
+      font-size: 0.95rem;
+      font-weight: 500;
+      border-radius: 8px;
+      border: 1px solid transparent;
       cursor: pointer;
+      transition: all 0.2s ease;
+      gap: 8px;
+    }
+
+    .btn-primary {
+      background-color: var(--primary);
+      color: white;
+    }
+
+    .btn-primary:hover {
+      background-color: var(--primary-hover);
+    }
+
+    .btn-secondary {
+      background-color: white;
+      border-color: var(--border);
+      color: var(--text);
+    }
+
+    .btn-secondary:hover {
+      background-color: #f9fafb;
+      border-color: #d1d5db;
+    }
+
+    .btn-success {
+      background-color: var(--success);
+      color: white;
+    }
+
+    .btn-success:hover {
+      background-color: var(--success-hover);
+    }
+
+    .btn-warning {
+      background-color: var(--warning);
+      color: white;
+    }
+
+    .btn-warning:hover {
+      background-color: var(--warning-hover);
+    }
+
+    .btn-full {
+      width: 100%;
     }
 
     #message {
-      margin: 10px 0;
-      padding: 10px;
+      margin: 20px 0;
+      padding: 16px;
+      border-radius: 8px;
+      font-weight: 500;
       display: none;
+      animation: fadeIn 0.3s ease;
     }
 
     .success {
-      background-color: #dff0d8;
-      color: #3c763d;
+      background-color: #ecfdf5;
+      color: #065f46;
+      border: 1px solid #a7f3d0;
     }
 
     .error {
-      background-color: #f2dede;
-      color: #a94442;
+      background-color: #fef2f2;
+      color: #991b1b;
+      border: 1px solid #fca5a5;
     }
 
-    .search-buttons {
+    .portal-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 24px;
       margin-top: 20px;
+    }
+
+    @media (min-width: 640px) {
+      .portal-grid {
+        grid-template-columns: 1fr 1fr;
+      }
+    }
+
+    .portal-section {
+      background: #f9fafb;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      gap: 15px;
+    }
+
+    .portal-section h3 {
+      font-size: 1.1rem;
+      font-weight: 600;
+      margin: 0 0 5px 0;
+      color: #374151;
+    }
+
+    .section-desc {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      margin: 0 0 10px 0;
+    }
+
+    .file-uploader {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .file-input {
+      font-size: 0.85rem;
+      border: 1px dashed var(--border);
       padding: 10px;
-      background: #f8f9fa;
-      border-radius: 4px;
+      border-radius: 6px;
+      background: white;
+      cursor: pointer;
+    }
+
+    .button-group-vertical {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(-10px); }
+      to { opacity: 1; transform: translateY(0); }
     }
   </style>
 </head>
 
 <body>
-  <h1>Keyword Manager</h1>
-  <div>
-    <h2>Add Keywords</h2>
-    <textarea id="keywords" placeholder="Enter keywords (one per line)"></textarea>
-    <button onclick="addKeywords()">Submit Keywords</button>
-    <button onclick="refreshKeywords()">Refresh Keywords</button>
-    <button onclick="reloadKeywords()">Reload Keywords</button>
-    <button onclick="window.location.href='/keywords'">View All Keywords</button>
+  <!-- Navigation Header Menu -->
+  <div class="nav-container">
+    <div class="nav-brand">🌐 Bing Search Suite</div>
+    <div class="nav-links">
+      <a href="/" id="nav-home" class="nav-link">📊 Dashboard</a>
+      <a href="/keywords" id="nav-keywords" class="nav-link">📋 Keywords</a>
+      <a href="/settings" id="nav-settings" class="nav-link">⚙️ Settings</a>
+    </div>
   </div>
+  
+  <div class="card">
+    <h2><span>📥</span> Add Keywords</h2>
+    <textarea id="keywords" placeholder="Enter keywords (one per line)"></textarea>
+    <div class="btn-group">
+      <button class="btn btn-primary" onclick="addKeywords()">Submit Keywords</button>
+      <button class="btn btn-secondary" onclick="refreshKeywords()">Refresh Keywords</button>
+      <button class="btn btn-secondary" onclick="reloadKeywords()">Reload Keywords</button>
+      <button class="btn btn-secondary" onclick="window.location.href='/keywords'">View All Keywords</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2><span>🔄</span> Import & Export Portal</h2>
+    <p class="description">Upload keyword lists from your computer, export your currently active vocabulary, or sync the database with server text files.</p>
+    
+    <div class="portal-grid" style="grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));">
+      <!-- Section 1: Upload File -->
+      <div class="portal-section">
+        <div>
+          <h3>Local File Import</h3>
+          <p class="section-desc">Select a <code>.txt</code> file from your device to import into the active engine.</p>
+        </div>
+        <div class="file-uploader">
+          <input type="file" id="importFile" accept=".txt" class="file-input" />
+          <button class="btn btn-primary btn-full" onclick="importFile()">
+            <span>📤</span> Import File
+          </button>
+        </div>
+      </div>
+
+      <!-- Section 2: Export Builder -->
+      <div class="portal-section">
+        <div>
+          <h3>Browser Export Builder</h3>
+          <p class="section-desc">Choose source and output format to download keywords immediately.</p>
+        </div>
+        <div style="display: flex; flex-direction: column; gap: 10px; width: 100%;">
+          <div>
+            <label style="font-size: 0.8rem; font-weight: 600; color: var(--text-muted); display: block; margin-bottom: 4px;">Data Source</label>
+            <select id="exportSource" style="width: 100%; padding: 8px; border: 1px solid var(--border); border-radius: 6px; font-family: inherit; font-size: 0.85rem; background: white; cursor: pointer;">
+              <option value="active">Active System Mode</option>
+              <option value="file">Local keywords.txt File</option>
+              {% if use_database %}
+              <option value="database">PostgreSQL Database</option>
+              {% endif %}
+            </select>
+          </div>
+          <div>
+            <label style="font-size: 0.8rem; font-weight: 600; color: var(--text-muted); display: block; margin-bottom: 4px;">Output Format</label>
+            <select id="exportFormat" style="width: 100%; padding: 8px; border: 1px solid var(--border); border-radius: 6px; font-family: inherit; font-size: 0.85rem; background: white; cursor: pointer;">
+              <option value="plain">Plain List (.txt)</option>
+              <option value="counts">With Counts (.txt - word:count)</option>
+              <option value="json">Full Dump (.json)</option>
+            </select>
+          </div>
+          <button class="btn btn-secondary btn-full" onclick="triggerBrowserExport()">
+            <span>📥</span> Export & Download
+          </button>
+        </div>
+      </div>
+
+      <!-- Section 3: Server Sync -->
+      {% if use_database %}
+      <div class="portal-section">
+        <div>
+          <h3>Server Database Sync</h3>
+          <p class="section-desc">Keep your PostgreSQL database and local server <code>keywords.txt</code> in sync.</p>
+        </div>
+        <div class="button-group-vertical">
+          <button class="btn btn-success btn-full" onclick="importFromLocalFile()">
+            <span>🗄️</span> Load <code>keywords.txt</code> to DB
+          </button>
+          <button class="btn btn-warning btn-full" onclick="exportToLocalFile()">
+            <span>📝</span> Save DB to <code>keywords.txt</code>
+          </button>
+        </div>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
   <div id="message"></div>
 
-  <!-- Remove the keyword-list div and its contents -->
-
-  <!-- <div class="search-buttons">
-    <h2>Search</h2>
-    <button onclick="openRandomSearch()">Random Search</button>
-  </div> -->
-
   <script>
+    // Initialize active link in Navbar
+    document.getElementById('nav-home').classList.add('active');
+
     function showMessage(message, isError = false) {
       const msgDiv = document.getElementById('message');
       msgDiv.textContent = message;
       msgDiv.className = isError ? 'error' : 'success';
       msgDiv.style.display = 'block';
-      setTimeout(() => msgDiv.style.display = 'none', 5000);
+      setTimeout(() => msgDiv.style.display = 'none', 6000);
     }
 
     async function addKeywords() {
       const keywords = document.getElementById('keywords').value;
+      if (!keywords.trim()) {
+        showMessage('Please enter some keywords', true);
+        return;
+      }
       try {
+        showMessage('Adding keywords, please wait...');
         const response = await fetch('/add_keywords', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/x-www-form-urlencoded',
           },
-          body: `keywords=${encodeURIComponent(keywords)}`,
-          timeout: 60000 // Increase timeout to 60 seconds
+          body: `keywords=${encodeURIComponent(keywords)}`
         });
         const data = await response.json();
         showMessage(data.message, !response.ok);
@@ -99,6 +417,7 @@
 
     async function refreshKeywords() {
       try {
+        showMessage('Refreshing keywords and pruning old entries, please wait...');
         const response = await fetch('/refresh', {
           method: 'POST'
         });
@@ -111,6 +430,7 @@
 
     async function reloadKeywords() {
       try {
+        showMessage('Reloading keywords list, please wait...');
         const response = await fetch('/reload_keywords', {
           method: 'POST'
         });
@@ -121,24 +441,70 @@
       }
     }
 
-    async function openRandomSearch() {
+    async function importFile() {
+      const fileInput = document.getElementById('importFile');
+      if (fileInput.files.length === 0) {
+        showMessage('Please select a file first', true);
+        return;
+      }
+
+      const file = fileInput.files[0];
+      const formData = new FormData();
+      formData.append('file', file);
+
       try {
-        const response = await fetch('/keyword');
+        showMessage('Importing file, please wait...');
+        const response = await fetch('/import', {
+          method: 'POST',
+          body: formData
+        });
         const data = await response.json();
-
-        if (data.keyword) {
-          window.open(`/search?q=${encodeURIComponent(data.keyword)}`, '_blank');
-        } else {
-          showMessage('No keywords available', true);
+        showMessage(data.message, !response.ok);
+        if (response.ok) {
+          fileInput.value = '';
         }
-
       } catch (error) {
-        showMessage('Error opening random search', true);
+        showMessage('Error importing file: ' + error.message, true);
       }
     }
 
-    // Initial load of keywords when page loads
-    document.addEventListener('DOMContentLoaded', displayKeywords);
+    function triggerBrowserExport() {
+      const source = document.getElementById('exportSource').value;
+      const format = document.getElementById('exportFormat').value;
+      window.location.href = `/export?source=${source}&format=${format}`;
+    }
+
+    async function importFromLocalFile() {
+      if (!confirm('Are you sure you want to load keywords from server keywords.txt into the PostgreSQL database? Existing keywords will be preserved, duplicates skipped.')) {
+        return;
+      }
+      try {
+        showMessage('Synchronizing database with keywords.txt, please wait...');
+        const response = await fetch('/import_from_file', {
+          method: 'POST'
+        });
+        const data = await response.json();
+        showMessage(data.message, !response.ok);
+      } catch (error) {
+        showMessage('Error importing from server file: ' + error.message, true);
+      }
+    }
+
+    async function exportToLocalFile() {
+      if (!confirm('Are you sure you want to save all PostgreSQL database keywords into the server local keywords.txt file? This will overwrite the file contents.')) {
+        return;
+      }
+      try {
+        showMessage('Synchronizing keywords.txt with database, please wait...');
+        const response = await fetch('/export_to_file', {
+          method: 'POST'
+        });
+        const data = await response.json();
+        showMessage(data.message, !response.ok);
+      } catch (error) {
+        showMessage('Error exporting to server file: ' + error.message, true);
+      }
+    }
   </script>
 </body>
 
