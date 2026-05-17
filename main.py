@@ -50,11 +50,11 @@ class Keyword(object):
 if USE_DATABASE:
     app.config['SQLALCHEMY_DATABASE_URI'] = database_url
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-    app.config['SQLALCHEMY_POOL_SIZE'] = 1
-    app.config['SQLALCHEMY_MAX_OVERFLOW'] = 0
+    app.config['SQLALCHEMY_POOL_SIZE'] = 10  # Healthy size for concurrent operations
+    app.config['SQLALCHEMY_MAX_OVERFLOW'] = 5  # Allow overflow for concurrent actions
     app.config['SQLALCHEMY_POOL_TIMEOUT'] = 30  # seconds
-    app.config['SQLALCHEMY_POOL_RECYCLE'] = 1800  # 30 minutes
-    db = SQLAlchemy(app)
+    app.config['SQLALCHEMY_POOL_RECYCLE'] = 1800  # Recycle after 30 minutes to stay fresh
+    db = SQLAlchemy(app, engine_options={"pool_pre_ping": True})
 
     # Database Models
     class Keyword(db.Model):
@@ -88,12 +88,12 @@ def save_settings(settings):
 # Initialize keywords list
 keywords = []
 
-# Modified load_keywords function to use database or text file
 def load_keywords():
     global keywords
     if USE_DATABASE:
         with app.app_context():
-            keywords = [k.keyword for k in Keyword.query.all()]
+            results = db.session.query(Keyword.keyword).all()
+            keywords = [r[0] for r in results]
     else:
         if os.path.exists('keywords.txt'):
             with open('keywords.txt', 'r', encoding='utf-8') as f:
@@ -198,6 +198,9 @@ def increment_keyword_count(keyword):
 
 def sync_called_counts_with_db():
     counts = load_called_counts()
+    if not counts:
+        return
+        
     to_delete = []
     deleted_count = 0
     
@@ -207,8 +210,13 @@ def sync_called_counts_with_db():
     logger.info(f"Starting sync with counts from file: {counts}")
     
     try:
+        # Fetch ALL matching keywords in a SINGLE query to eliminate the N+1 network overhead!
+        keyword_list = list(counts.keys())
+        db_keywords = Keyword.query.filter(Keyword.keyword.in_(keyword_list)).all()
+        db_keywords_map = {k.keyword: k for k in db_keywords}
+        
         for keyword_text, count in counts.items():
-            keyword = Keyword.query.filter_by(keyword=keyword_text).first()
+            keyword = db_keywords_map.get(keyword_text)
             if keyword:
                 if count >= threshold:
                     logger.info(f"Marking for deletion: {keyword_text} with count {count}")
@@ -221,14 +229,9 @@ def sync_called_counts_with_db():
         db.session.commit()
         logger.info(f"Deleted {deleted_count} keywords from database")
         
-        # Clean up the keywords list
-        removed_from_list = 0
-        for keyword in to_delete:
-            if keyword in keywords:
-                logger.info(f"Removing {keyword} from keywords list")
-                keywords.remove(keyword)
-                removed_from_list += 1
-        logger.info(f"Removed {removed_from_list} keywords from memory list")
+        # Clean up the keywords list in memory
+        global keywords
+        keywords = [kw for kw in keywords if kw not in to_delete]
             
         # Clean up the counts file
         old_count = len(counts)
@@ -499,12 +502,13 @@ def get_keywords():
 def get_keywords_with_counts():
     try:
         if USE_DATABASE:
+            results = db.session.query(Keyword.keyword, Keyword.called_count).all()
             keywords_with_counts = [
                 {
-                    'keyword': k.keyword,
-                    'count': k.called_count
+                    'keyword': r[0],
+                    'count': r[1]
                 } 
-                for k in Keyword.query.all()
+                for r in results
             ]
         else:
             counts = load_called_counts()
@@ -540,7 +544,8 @@ def export_keywords():
         if source == "database":
             if not USE_DATABASE:
                 return jsonify({"status": "error", "message": "PostgreSQL database is disabled or not configured in environment"}), 400
-            kws_data = [{'keyword': k.keyword, 'count': k.called_count} for k in Keyword.query.all()]
+            results = db.session.query(Keyword.keyword, Keyword.called_count).all()
+            kws_data = [{'keyword': r[0], 'count': r[1]} for r in results]
             
         elif source == "file":
             if not os.path.exists('keywords.txt'):
@@ -554,7 +559,8 @@ def export_keywords():
             
         else: # "active"
             if USE_DATABASE:
-                kws_data = [{'keyword': k.keyword, 'count': k.called_count} for k in Keyword.query.all()]
+                results = db.session.query(Keyword.keyword, Keyword.called_count).all()
+                kws_data = [{'keyword': r[0], 'count': r[1]} for r in results]
             else:
                 if os.path.exists('keywords.txt'):
                     with open('keywords.txt', 'r', encoding='utf-8') as f:
