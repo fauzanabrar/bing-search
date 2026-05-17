@@ -10,6 +10,8 @@ import requests
 import os
 import time
 import json
+import gzip
+import io
 from pathlib import Path
 import logging
 
@@ -28,6 +30,22 @@ logger = logging.getLogger(__name__)
 app = Flask(__name__)
 CORS(app)
 lock = RLock()
+
+def gzip_response(data_dict):
+    json_str = json.dumps(data_dict)
+    content = json_str.encode('utf-8')
+    
+    out = io.BytesIO()
+    with gzip.GzipFile(fileobj=out, mode='w', compresslevel=6) as f:
+        f.write(content)
+    
+    compressed_content = out.getvalue()
+    
+    response = Response(compressed_content)
+    response.headers['Content-Encoding'] = 'gzip'
+    response.headers['Content-Type'] = 'application/json'
+    response.headers['Content-Length'] = len(compressed_content)
+    return response
 
 # Database Configuration
 use_database_str = os.getenv('USE_DATABASE', '').lower()
@@ -93,7 +111,7 @@ def load_keywords():
     if USE_DATABASE:
         with app.app_context():
             results = db.session.query(Keyword.keyword).all()
-            keywords = [r[0] for r in results]
+            keywords = [r[0] for r in results if r[0] is not None]
     else:
         if os.path.exists('keywords.txt'):
             with open('keywords.txt', 'r', encoding='utf-8') as f:
@@ -506,9 +524,9 @@ def get_keywords_with_counts():
             keywords_with_counts = [
                 {
                     'keyword': r[0],
-                    'count': r[1]
+                    'count': r[1] or 0
                 } 
-                for r in results
+                for r in results if r[0] is not None
             ]
         else:
             counts = load_called_counts()
@@ -520,11 +538,12 @@ def get_keywords_with_counts():
             keywords_with_counts = [
                 {
                     'keyword': kw,
-                    'count': counts.get(kw, 0)
+                    'count': counts.get(kw, 0) or 0
                 }
-                for kw in kws
+                for kw in kws if kw is not None
             ]
-        return jsonify({'keywords': keywords_with_counts})
+        # Compress the response using native Gzip to prevent Render/browser truncation!
+        return gzip_response({'keywords': keywords_with_counts})
     except Exception as e:
         return jsonify({'keywords': [], 'error': str(e)}), 500
 
@@ -545,7 +564,7 @@ def export_keywords():
             if not USE_DATABASE:
                 return jsonify({"status": "error", "message": "PostgreSQL database is disabled or not configured in environment"}), 400
             results = db.session.query(Keyword.keyword, Keyword.called_count).all()
-            kws_data = [{'keyword': r[0], 'count': r[1]} for r in results]
+            kws_data = [{'keyword': r[0], 'count': r[1] or 0} for r in results if r[0] is not None]
             
         elif source == "file":
             if not os.path.exists('keywords.txt'):
@@ -555,12 +574,12 @@ def export_keywords():
                 file_kws = [line.strip() for line in f if line.strip()]
                 
             counts = load_called_counts()
-            kws_data = [{'keyword': kw, 'count': counts.get(kw, 0)} for kw in file_kws]
+            kws_data = [{'keyword': kw, 'count': counts.get(kw, 0) or 0} for kw in file_kws if kw is not None]
             
         else: # "active"
             if USE_DATABASE:
                 results = db.session.query(Keyword.keyword, Keyword.called_count).all()
-                kws_data = [{'keyword': r[0], 'count': r[1]} for r in results]
+                kws_data = [{'keyword': r[0], 'count': r[1] or 0} for r in results if r[0] is not None]
             else:
                 if os.path.exists('keywords.txt'):
                     with open('keywords.txt', 'r', encoding='utf-8') as f:
@@ -568,7 +587,7 @@ def export_keywords():
                 else:
                     file_kws = []
                 counts = load_called_counts()
-                kws_data = [{'keyword': kw, 'count': counts.get(kw, 0)} for kw in file_kws]
+                kws_data = [{'keyword': kw, 'count': counts.get(kw, 0) or 0} for kw in file_kws if kw is not None]
         
         # 2. Format the response
         if export_format == "json":
